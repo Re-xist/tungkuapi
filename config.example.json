@@ -1,0 +1,31 @@
+{
+  "headers": {
+    "Authorization": "Bearer YOUR_TOKEN_HERE",
+    "X-API-Key": "your-api-key-here",
+    "Content-Type": "application/json"
+  },
+  "endpoints": {
+    "auth": "/api/auth/login",
+    "users": "/api/users",
+    "products": "/api/products"
+  },
+  "scan_options": {
+    "timeout": 10,
+    "max_depth": 3,
+    "follow_redirects": true
+  },
+  "custom_payloads": {
+    "sqli": [
+      "' OR '1'='1",
+      "admin'--"
+    ],
+    "xss": [
+      "<script>alert(1)</script>",
+      "<img src=x onerror=alert(1)>"
+    ]
+  },
+  "exclude_paths": [
+    "/api/health",
+    "/api/ping"
+  ]
+}
