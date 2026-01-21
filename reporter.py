@@ -558,10 +558,51 @@ class ReportGenerator:
                     <h4>📝 Deskripsi</h4>
                     <p>{self._escape_html(vuln.get('description', ''))}</p>
                 </div>
+
+                <div class="vuln-section" style="background: #1e1e1e; border-left: 4px solid {color};">
+                    <h4 style="color: {color};">💣 Evidence & Proof of Concept (PoC)</h4>
+                    <div style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 0.85em;">
+                        <div style="color: #66d9ef; margin-bottom: 10px;"># Curl command to reproduce:</div>
+                        <div style="background: #000; padding: 10px; border-radius: 3px;">
+                            <code style="color: #a6e22e; white-space: pre-wrap; word-break: break-all;">{self._generate_curl_command(vuln)}</code>
+                        </div>
+                    </div>
+                </div>
+
 {request_response_html}
                 {remediation_html}
             </div>
         </div>"""
+
+    def _generate_curl_command(self, vuln):
+        """Generate curl command from vulnerability details"""
+        req = vuln.get('request_detail', {})
+
+        if not req:
+            return "# No curl command available"
+
+        # Build curl command
+        method = req.get('method', 'GET')
+        url = req.get('url', '')
+
+        # Start with curl command
+        curl_parts = [f"curl -X {method} '{url}'"]
+
+        # Add headers
+        headers = req.get('headers', {})
+        if headers:
+            for key, value in headers.items():
+                # Skip some default headers
+                if key.lower() in ['user-agent', 'accept', 'connection']:
+                    continue
+                # Escape single quotes in value
+                escaped_value = str(value).replace("'", "'\\''")
+                curl_parts.append(f"-H '{key}: {escaped_value}'")
+
+        # Join all parts
+        curl_cmd = " ".join(curl_parts)
+
+        return curl_cmd
 
     def _escape_html(self, text):
         """Escape HTML special characters"""
