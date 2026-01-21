@@ -168,6 +168,61 @@ python3 tungkuapi.py -u https://api.example.com -s discovery
 python3 tungkuapi.py -u https://api.example.com -s fuzz
 ```
 
+### Using SecLists Wordlists
+
+**Download SecLists:**
+```bash
+# Download SecLists from GitHub
+python3 tungkuapi.py --download-seclists
+```
+
+**Use SecLists API Discovery:**
+```bash
+# API endpoints discovery
+python3 tungkuapi.py -u https://api.example.com \
+  -w wordlists/SecLists/Discovery/Web-Content/api.txt
+
+# REST API endpoints
+python3 tungkuapi.py -u https://api.example.com \
+  -w wordlists/SecLists/Discovery/Web-Content/rest-api-endpoints.txt
+
+# API controller discovery
+python3 tungkuapi.py -u https://api.example.com \
+  -w wordlists/SecLists/Discovery/Web-Content/api-controller.txt
+```
+
+**Use SecLists for Fuzzing:**
+```bash
+# Payment API fuzzing with payment payloads
+python3 tungkuapi.py -u https://api.example.com \
+  -w wordlists/SecLists/Fuzzing/api-payment-fuzz.txt \
+  --fuzz
+
+# General API fuzzing
+python3 tungkuapi.py -u https://api.example.com \
+  -w wordlists/SecLists/Fuzzing/api-fuzz.txt \
+  --fuzz
+```
+
+**Test with Credit Card Payloads (Authorized Testing Only):**
+```bash
+# Payment API security testing with CC payloads
+python3 tungkuapi.py -u https://api.example.com/api/payment \
+  -w wordlists/SecLists/Fuzzing/api-payment-fuzz.txt \
+  -s sqli,xss
+
+# E-commerce API testing
+python3 tungkuapi.py -u https://shop.example.com/api/checkout \
+  -w wordlists/SecLists/Fuzzing/E-commerce/e-commerce-payloads.txt
+```
+
+**Available SecLists Categories:**
+- `Discovery/Web-Content/` - API endpoint discovery
+- `Fuzzing/` - API fuzzing payloads
+- `Fuzzing/api-payment-fuzz.txt` - Payment API fuzzing
+- `Fuzzing/e-commerce-payloads.txt` - E-commerce payloads
+- `Discovery/Web-Content/common-api.txt` - Common API paths
+
 ## 🔧 Command Line Options
 
 ```
@@ -175,41 +230,46 @@ usage: tungkuapi.py [-h] -u URL [-s SCAN_TYPES] [--fuzz] [-t TOKEN]
                     [-H HEADER] [--proxy PROXY] [--timeout TIMEOUT]
                     [--threads THREADS] [--delay DELAY] [-c CONFIG]
                     [-o OUTPUT] [-f {html,json,txt,pdf,all}]
+                    [-w WORDLIST] [--download-seclists]
                     [--save FILE] [--load FILE] [--diff FILE]
                     [-v] [--no-report]
 
 Target Options:
-  -u, --url URL          Target API URL
-  --openapi FILE         Import OpenAPI/Swagger spec
+  -u, --url URL             Target API URL
+  --openapi FILE            Import OpenAPI/Swagger spec
 
 Scan Options:
-  -s, --scan SCAN_TYPES  Scan types (comma-separated):
-                         sqli, xss, ssrf, auth, headers, xxe, cmdi,
-                         dirtrav, massassign, parampoll, template,
-                         graphql, fileupload, cors, discovery, fuzz
-  --fuzz                 Enable API fuzzing
+  -s, --scan SCAN_TYPES     Scan types (comma-separated):
+                           sqli, xss, ssrf, auth, headers, xxe, cmdi,
+                           dirtrav, massassign, parampoll, template,
+                           graphql, fileupload, cors, discovery, fuzz
+  --fuzz                    Enable API fuzzing
+  -w, --wordlist WORDLIST   Custom wordlist file for API discovery
+
+SecLists Integration:
+  --download-seclists       Download SecLists wordlists from GitHub
 
 Authentication & Headers:
-  -t, --token TOKEN      Authentication token
-  -H, --header HEADER    Custom headers (format: 'Name: Value')
+  -t, --token TOKEN         Authentication token
+  -H, --header HEADER       Custom headers (format: 'Name: Value')
 
 Network Options:
-  --proxy PROXY          Proxy URL (e.g., http://127.0.0.1:8080)
-  --timeout SECONDS      Request timeout (default: 10)
-  --threads NUM          Number of threads (default: 5)
-  --delay SECONDS        Delay between requests (default: 0)
+  --proxy PROXY             Proxy URL (e.g., http://127.0.0.1:8080)
+  --timeout SECONDS         Request timeout (default: 10)
+  --threads NUM             Number of threads (default: 5)
+  --delay SECONDS           Delay between requests (default: 0)
 
 Config & Output:
-  -c, --config FILE      Configuration file (JSON)
-  -o, --output DIR       Output directory (default: reports)
-  -f, --format FORMAT    Report format: html, json, txt, pdf, all
-  --save FILE            Save scan results to file
-  --load FILE            Load scan results from file
-  --diff FILE            Compare with previous scan results
+  -c, --config FILE         Configuration file (JSON)
+  -o, --output DIR          Output directory (default: reports)
+  -f, --format FORMAT       Report format: html, json, txt, pdf, all
+  --save FILE               Save scan results to file
+  --load FILE               Load scan results from file
+  --diff FILE               Compare with previous scan results
 
 Behavior:
-  -v, --verbose          Verbose output
-  --no-report            Skip report generation
+  -v, --verbose             Verbose output
+  --no-report               Skip report generation
 ```
 
 ## 📋 Scan Types
