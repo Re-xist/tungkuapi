@@ -381,8 +381,9 @@ class Vulnerability:
     SEVERITY_LEVELS = ["INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"]
 
     @staticmethod
-    def create(name, severity, description, evidence, endpoint, remediation=None):
-        """Create a vulnerability finding"""
+    def create(name, severity, description, evidence, endpoint, remediation=None,
+               full_url=None, parameter=None, request_method="GET", payload=None):
+        """Create a vulnerability finding with enhanced details"""
         if severity not in Vulnerability.SEVERITY_LEVELS:
             severity = "INFO"
 
@@ -395,6 +396,15 @@ class Vulnerability:
             "timestamp": datetime.now().isoformat()
         }
 
+        # Enhanced fields
+        if full_url:
+            finding["full_url"] = full_url
+        if parameter:
+            finding["parameter"] = parameter
+        if request_method:
+            finding["request_method"] = request_method
+        if payload:
+            finding["payload"] = payload
         if remediation:
             finding["remediation"] = remediation
 

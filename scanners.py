@@ -71,8 +71,11 @@ class SQLScanner(BaseScanner):
 
         for endpoint in test_endpoints:
             for payload in self.payloads:
+                param_name = "id"
+                full_url = f"{self.client.base_url}{endpoint}?{param_name}={payload}"
+
                 response = self.client.get(
-                    f"{endpoint}?id={payload}",
+                    f"{endpoint}?{param_name}={payload}",
                     headers=config.get("headers", {}) if config else {}
                 )
 
@@ -85,25 +88,34 @@ class SQLScanner(BaseScanner):
                                 "SQL Injection vulnerability detected",
                                 f"Payload: {payload}\nError: {error[:100]}",
                                 endpoint,
-                                remediation="Use parameterized queries/prepared statements."
+                                remediation="Use parameterized queries/prepared statements.",
+                                full_url=full_url,
+                                parameter=param_name,
+                                request_method="GET",
+                                payload=payload
                             )
                             findings.append(finding)
-                            self.logger.success(f"SQLi found at {endpoint}")
+                            self.logger.success(f"SQLi found at {endpoint} (param: {param_name})")
                             break
 
                     time_payload = "1' AND (SELECT SLEEP(5))--"
                     start = time.time()
-                    resp = self.client.get(f"{endpoint}?id={time_payload}")
+                    resp = self.client.get(f"{endpoint}?{param_name}={time_payload}")
                     elapsed = time.time() - start
 
                     if elapsed > 4.5:
+                        full_url_blind = f"{self.client.base_url}{endpoint}?{param_name}={time_payload}"
                         finding = Vulnerability.create(
                             "Blind SQL Injection (Time-Based)",
                             "HIGH",
                             "Time-based blind SQL injection detected",
                             f"Response time: {elapsed:.2f}s",
                             endpoint,
-                            remediation="Use parameterized queries."
+                            remediation="Use parameterized queries.",
+                            full_url=full_url_blind,
+                            parameter=param_name,
+                            request_method="GET",
+                            payload=time_payload
                         )
                         findings.append(finding)
 

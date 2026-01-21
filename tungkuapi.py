@@ -276,8 +276,13 @@ class TungkuApi:
 
     def generate_report(self, format="html"):
         """Generate security report"""
+        # Extract target name from URL for report filename
+        from urllib.parse import urlparse
+        parsed_url = urlparse(self.target)
+        target_name = parsed_url.netloc.replace('.', '_') if parsed_url.netloc else 'target'
+        
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        report_file = self.output_dir / f"report_{timestamp}"
+        report_file = self.output_dir / f"{target_name}_scan_{timestamp}"
 
         generator = ReportGenerator(self.results, self.logger)
 
@@ -331,6 +336,11 @@ class TungkuApi:
 
 def print_banner():
     """Print tool banner"""
+    print("=" * 80)
+    print("  TUNGKUAPI v2.0 - Advanced API Penetration Testing Tool")
+    print("  Author: Re-xist | GitHub: https://github.com/Re-xist")
+    print("=" * 80)
+    print()
     banner = r"""
 ╔═══════════════════════════════════════════════════════════════╗
 ║                                                               ║

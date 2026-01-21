@@ -454,6 +454,33 @@ class ReportGenerator:
                 <p>{self._escape_html(vuln.get('remediation', ''))}</p>
             </div>"""
 
+        # Build meta info with enhanced fields
+        meta_html = ""
+        if vuln.get('full_url'):
+            meta_html += f"""
+                    <div class="vuln-meta-item">
+                        <strong>Full URL</strong>
+                        <span style="word-break: break-all;">{self._escape_html(vuln.get('full_url', ''))}</span>
+                    </div>"""
+        if vuln.get('parameter'):
+            meta_html += f"""
+                    <div class="vuln-meta-item">
+                        <strong>Vulnerable Parameter</strong>
+                        <span>{self._escape_html(vuln.get('parameter', ''))}</span>
+                    </div>"""
+        if vuln.get('request_method'):
+            meta_html += f"""
+                    <div class="vuln-meta-item">
+                        <strong>Method</strong>
+                        <span>{vuln.get('request_method', 'GET')}</span>
+                    </div>"""
+        if vuln.get('payload'):
+            meta_html += f"""
+                    <div class="vuln-meta-item">
+                        <strong>Payload</strong>
+                        <span style="word-break: break-all; font-family: monospace; font-size: 0.9em;">{self._escape_html(vuln.get('payload', ''))}</span>
+                    </div>"""
+
         return f"""
         <div class="vuln-card">
             <div class="vuln-header" style="background: {color}">
@@ -465,13 +492,14 @@ class ReportGenerator:
             <div class="vuln-body">
                 <div class="vuln-meta">
                     <div class="vuln-meta-item">
-                        <strong>Endpoint</strong>
+                        <strong>Endpoint Path</strong>
                         <span>{self._escape_html(vuln.get('endpoint', ''))}</span>
                     </div>
                     <div class="vuln-meta-item">
                         <strong>Timestamp</strong>
                         <span>{vuln.get('timestamp', '')}</span>
                     </div>
+{meta_html}
                 </div>
 
                 <div class="vuln-section">
