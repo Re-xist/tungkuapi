@@ -176,10 +176,31 @@ class APIDiscovery:
         self.logger = logger or Logger()
         self.discovered = []
 
-    def discover(self, custom_wordlist=None):
+    def load_wordlist(self, wordlist_file):
+        """Load wordlist from file"""
+        try:
+            with open(wordlist_file, 'r') as f:
+                wordlist = [line.strip() for line in f if line.strip()]
+            self.logger.info(f"Loaded {len(wordlist)} paths from {wordlist_file}")
+            return wordlist
+        except FileNotFoundError:
+            self.logger.error(f"Wordlist file not found: {wordlist_file}")
+            return []
+        except Exception as e:
+            self.logger.error(f"Error loading wordlist: {e}")
+            return []
+
+    def discover(self, custom_wordlist=None, wordlist_file=None):
         """Discover API endpoints"""
         endpoints = []
-        wordlist = custom_wordlist or self.COMMON_PATHS
+
+        # Determine which wordlist to use
+        if wordlist_file:
+            wordlist = self.load_wordlist(wordlist_file)
+        elif custom_wordlist:
+            wordlist = custom_wordlist
+        else:
+            wordlist = self.COMMON_PATHS
 
         self.logger.info(f"Starting discovery with {len(wordlist)} paths...")
 
@@ -495,3 +516,50 @@ def detect_technology(response):
         tech["framework"] = "PHP"
 
     return tech
+
+
+def download_seclists(output_dir="wordlists", logger=None):
+    """Download SecLists repository for wordlists"""
+    import subprocess
+    import os
+
+    if logger is None:
+        logger = Logger()
+
+    wordlist_dir = Path(output_dir)
+    wordlist_dir.mkdir(exist_ok=True)
+
+    seclists_path = wordlist_dir / "SecLists"
+
+    if seclists_path.exists():
+        logger.info(f"SecLists already exists at: {seclists_path}")
+        return str(seclists_path)
+
+    logger.info("Downloading SecLists from GitHub...")
+
+    try:
+        # Clone SecLists repository
+        subprocess.run(
+            ["git", "clone", "https://github.com/danielmiessler/SecLists.git", str(seclists_path)],
+            check=True,
+            capture_output=True
+        )
+
+        logger.success(f"SecLists downloaded to: {seclists_path}")
+        logger.info("")
+        logger.info("Available API wordlists:")
+        logger.info(f"  {seclists_path}/Discovery/Web-Content/api.txt")
+        logger.info(f"  {seclists_path}/Discovery/Web-Content/api-controller.txt")
+        logger.info(f"  {seclists_path}/Discovery/Web-Content/rest-api-endpoints.txt")
+        logger.info(f"  {seclists_path}/Discovery/Web-Content/common-api.txt")
+        logger.info("")
+
+        return str(seclists_path)
+
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Failed to download SecLists: {e}")
+        logger.info("Make sure git is installed")
+        return None
+    except Exception as e:
+        logger.error(f"Error: {e}")
+        return None

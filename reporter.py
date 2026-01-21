@@ -544,8 +544,8 @@ class ReportGenerator:
             <div class="vuln-body">
                 <div class="vuln-meta">
                     <div class="vuln-meta-item">
-                        <strong>Endpoint Path</strong>
-                        <span>{self._escape_html(vuln.get('endpoint', ''))}</span>
+                        <strong>Endpoint URL</strong>
+                        <span style="word-break: break-all;">{self._escape_html(vuln.get('full_url', vuln.get('endpoint', '')))}</span>
                     </div>
                     <div class="vuln-meta-item">
                         <strong>Timestamp</strong>

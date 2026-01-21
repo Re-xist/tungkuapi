@@ -25,7 +25,7 @@ from scanners import (
     GraphQLScanner, FileUploadScanner, CORSScanner
 )
 from reporter import ReportGenerator
-from utils import APIClient, Logger, APIDiscovery, WAFDetector, Fuzzer
+from utils import APIClient, Logger, APIDiscovery, WAFDetector, Fuzzer, download_seclists
 
 
 class TungkuApi:
@@ -56,7 +56,7 @@ class TungkuApi:
         self.lock = threading.Lock()
         self._scan_progress = {"completed": 0, "total": 0}
 
-    def run_all_scans(self, config=None, scan_types="all", fuzzing=False):
+    def run_all_scans(self, config=None, scan_types="all", fuzzing=False, wordlist_file=None):
         """Run all security scans"""
         self.logger.info(f"🔥 TungkuApi v2.0 - Starting security scan on: {self.target}")
         self.logger.info("=" * 80)
@@ -74,7 +74,7 @@ class TungkuApi:
 
         # API Discovery
         self.logger.info("\n[🔍] Discovering API endpoints...")
-        discovered = self.api_discovery.discover()
+        discovered = self.api_discovery.discover(wordlist_file=wordlist_file)
         self.results["discovered_endpoints"] = discovered
         self.logger.success(f"Found {len(discovered)} endpoints")
 
@@ -400,6 +400,10 @@ def main():
                        help="Scan types (comma-separated): sqli,xss,ssrf,auth,headers,xxe,cmdi,dirtrav,massassign,parampoll,template,graphql,fileupload,cors,discovery,fuzz")
     parser.add_argument("--fuzz", action="store_true",
                        help="Enable API fuzzing")
+    parser.add_argument("-w", "--wordlist", metavar="FILE",
+                       help="Custom wordlist file for API discovery (one path per line)")
+    parser.add_argument("--download-seclists", action="store_true",
+                       help="Download SecLists wordlist for API discovery")
 
     # Authentication & Headers
     parser.add_argument("-t", "--token", help="Authentication token")
@@ -474,6 +478,17 @@ def main():
     if not args.url and not args.openapi:
         parser.error("-u/--url or --openapi is required (unless using --load)")
 
+    # Download SecLists if requested
+    if args.download_seclists:
+        print("\n[📥] Downloading SecLists wordlists...")
+        seclists_path = download_seclists(logger=Logger(args.verbose))
+        if seclists_path:
+            print(f"\n[✓] SecLists ready!")
+            print(f"\n[💡] Usage examples:")
+            print(f"  python tungkuapi.py -u https://api.example.com -w {seclists_path}/Discovery/Web-Content/api.txt")
+            print(f"  python tungkuapi.py -u https://api.example.com -w {seclists_path}/Discovery/Web-Content/rest-api-endpoints.txt")
+        sys.exit(0)
+
     # Load config
     config = {}
     if args.config:
@@ -517,7 +532,8 @@ def main():
             results = tool.import_openapi(args.openapi, config)
         else:
             scan_types = args.scan if args.scan else "all"
-            results = tool.run_all_scans(config, scan_types, args.fuzz)
+            wordlist_file = args.wordlist if args.wordlist else None
+            results = tool.run_all_scans(config, scan_types, args.fuzz, wordlist_file)
 
         # Save results if requested
         if args.save:
