@@ -481,6 +481,58 @@ class ReportGenerator:
                         <span style="word-break: break-all; font-family: monospace; font-size: 0.9em;">{self._escape_html(vuln.get('payload', ''))}</span>
                     </div>"""
 
+        # Request/Response details
+        request_response_html = ""
+        if vuln.get('request_detail') or vuln.get('response_detail'):
+            req = vuln.get('request_detail', {})
+            resp = vuln.get('response_detail', {})
+
+            request_response_html = """
+                <div class="vuln-section">
+                    <h4>🔌 HTTP Request</h4>
+                    <div style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 0.85em; overflow-x: auto;">
+            """
+
+            if req:
+                request_response_html += f"<div><span style='color: #66d9ef;'>{req.get('method', 'GET')}</span> <span style='color: #a6e22e;'>{self._escape_html(req.get('url', ''))}</span></div>"
+
+                if req.get('headers'):
+                    request_response_html += "<div style='margin-top: 10px; color: #fd971f;'>Headers:</div>"
+                    for k, v in req.get('headers', {}).items():
+                        request_response_html += f"<div><span style='color: #66d9ef;'>{self._escape_html(k)}</span>: {self._escape_html(str(v))}</div>"
+
+            request_response_html += "</div>"
+
+            request_response_html += """
+                    <h4 style='margin-top: 15px;'>📥 HTTP Response</h4>
+                    <div style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 0.85em; overflow-x: auto;">
+            """
+
+            if resp:
+                status = resp.get('status_code', 'N/A')
+                status_color = '#a6e22e' if status == 200 else '#f92672'
+                request_response_html += f"<div>Status: <span style='color: {status_color};'>{status}</span></div>"
+
+                if resp.get('headers'):
+                    request_response_html += "<div style='margin-top: 10px; color: #fd971f;'>Headers:</div>"
+                    for k, v in resp.get('headers', {}).items():
+                        request_response_html += f"<div><span style='color: #66d9ef;'>{self._escape_html(k)}</span>: {self._escape_html(str(v)[:100])}</div>"
+
+                if resp.get('response_time'):
+                    request_response_html += f"<div style='margin-top: 10px;'>Response Time: <span style='color: #e6db74;'>{resp.get('response_time')}</span></div>"
+
+                if resp.get('response_snippet'):
+                    request_response_html += f"<div style='margin-top: 10px;'><span style='color: #fd971f;'>Response Body (first 500 chars):</span></div>"
+                    request_response_html += f"<div style='color: #a6e22e; word-break: break-word;'>{self._escape_html(resp.get('response_snippet', ''))}</div>"
+
+                if resp.get('time_delay'):
+                    request_response_html += f"<div style='margin-top: 10px;'>Time Delay: <span style='color: #f92672;'>{resp.get('time_delay')}</span></div>"
+
+                if resp.get('content_length'):
+                    request_response_html += f"<div style='margin-top: 10px;'>Content Length: {resp.get('content_length')} bytes</div>"
+
+            request_response_html += "</div></div>"
+
         return f"""
         <div class="vuln-card">
             <div class="vuln-header" style="background: {color}">
@@ -506,11 +558,7 @@ class ReportGenerator:
                     <h4>📝 Deskripsi</h4>
                     <p>{self._escape_html(vuln.get('description', ''))}</p>
                 </div>
-
-                <div class="vuln-section">
-                    <h4>🔎 Bukti</h4>
-                    <pre>{self._escape_html(vuln.get('evidence', ''))}</pre>
-                </div>
+{request_response_html}
                 {remediation_html}
             </div>
         </div>"""

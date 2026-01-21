@@ -72,27 +72,49 @@ class SQLScanner(BaseScanner):
         for endpoint in test_endpoints:
             for payload in self.payloads:
                 param_name = "id"
-                full_url = f"{self.client.base_url}{endpoint}?{param_name}={payload}"
+                test_url = f"{endpoint}?{param_name}={payload}"
+                full_url = f"{self.client.base_url}{test_url}"
+
+                headers = config.get("headers", {}) if config else {}
 
                 response = self.client.get(
-                    f"{endpoint}?{param_name}={payload}",
-                    headers=config.get("headers", {}) if config else {}
+                    test_url,
+                    headers=headers
                 )
 
                 if response:
+                    # Capture request details
+                    request_detail = {
+                        "method": "GET",
+                        "url": full_url,
+                        "headers": {**self.client.session.headers, **headers},
+                        "parameter": param_name,
+                        "payload": payload
+                    }
+
+                    # Capture response details
+                    response_detail = {
+                        "status_code": response.status_code,
+                        "headers": dict(response.headers),
+                        "content_length": len(response.content),
+                        "response_snippet": response.text[:500] if response.text else ""
+                    }
+
                     for error in self.error_patterns:
                         if error.lower() in response.text.lower():
                             finding = Vulnerability.create(
                                 "SQL Injection",
                                 "CRITICAL",
                                 "SQL Injection vulnerability detected",
-                                f"Payload: {payload}\nError: {error[:100]}",
+                                f"Payload: {payload}\\nError: {error[:100]}",
                                 endpoint,
                                 remediation="Use parameterized queries/prepared statements.",
                                 full_url=full_url,
                                 parameter=param_name,
                                 request_method="GET",
-                                payload=payload
+                                payload=payload,
+                                request_detail=request_detail,
+                                response_detail=response_detail
                             )
                             findings.append(finding)
                             self.logger.success(f"SQLi found at {endpoint} (param: {param_name})")
@@ -105,17 +127,34 @@ class SQLScanner(BaseScanner):
 
                     if elapsed > 4.5:
                         full_url_blind = f"{self.client.base_url}{endpoint}?{param_name}={time_payload}"
+
+                        request_detail_blind = {
+                            "method": "GET",
+                            "url": full_url_blind,
+                            "headers": {**self.client.session.headers, **headers},
+                            "parameter": param_name,
+                            "payload": time_payload
+                        }
+
+                        response_detail_blind = {
+                            "status_code": resp.status_code if resp else None,
+                            "response_time": f"{elapsed:.2f}s",
+                            "time_delay": f"{elapsed:.2f}s (expected < 1s for normal response)"
+                        }
+
                         finding = Vulnerability.create(
                             "Blind SQL Injection (Time-Based)",
                             "HIGH",
                             "Time-based blind SQL injection detected",
-                            f"Response time: {elapsed:.2f}s",
+                            f"Response time: {elapsed:.2f}s (indicates SQL execution delay)",
                             endpoint,
                             remediation="Use parameterized queries.",
                             full_url=full_url_blind,
                             parameter=param_name,
                             request_method="GET",
-                            payload=time_payload
+                            payload=time_payload,
+                            request_detail=request_detail_blind,
+                            response_detail=response_detail_blind
                         )
                         findings.append(finding)
 

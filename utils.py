@@ -382,7 +382,8 @@ class Vulnerability:
 
     @staticmethod
     def create(name, severity, description, evidence, endpoint, remediation=None,
-               full_url=None, parameter=None, request_method="GET", payload=None):
+               full_url=None, parameter=None, request_method="GET", payload=None,
+               request_detail=None, response_detail=None):
         """Create a vulnerability finding with enhanced details"""
         if severity not in Vulnerability.SEVERITY_LEVELS:
             severity = "INFO"
@@ -405,6 +406,10 @@ class Vulnerability:
             finding["request_method"] = request_method
         if payload:
             finding["payload"] = payload
+        if request_detail:
+            finding["request_detail"] = request_detail
+        if response_detail:
+            finding["response_detail"] = response_detail
         if remediation:
             finding["remediation"] = remediation
 
