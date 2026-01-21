@@ -1,2 +1,15 @@
+# TungkuApi v2.0 - Requirements
+# Author: Re-xist
+# GitHub: https://github.com/Re-xist
+
+# Core HTTP requests
 requests>=2.31.0
+
+# PDF generation (optional - for PDF reports)
+weasyprint>=60.0
+
+# YAML support for OpenAPI/Swagger import
+pyyaml>=6.0
+
+# For enhanced functionality
 urllib3>=2.0.0

@@ -1,49 +1,79 @@
-# 🔥 TungkuApi
+# 🔥 TungkuApi v2.0
 
-> **Powerful API Penetration Testing CLI Tool** - Comprehensive security scanner with detailed reporting
+> **Advanced API Penetration Testing CLI Tool** - Comprehensive security scanner with detailed reporting
 
 [![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-2.0-orange.svg)](https://github.com/Re-xist/tungkuapi)
 [![Author](https://img.shields.io/badge/Author-Re--xist-red.svg)](https://github.com/Re-xist)
 
-**TungkuApi** is a command-line interface tool designed for API penetration testing. It automatically scans APIs for security vulnerabilities and generates comprehensive, professional reports in multiple formats.
+**TungkuApi v2.0** is an advanced command-line interface tool for API penetration testing. It automatically scans APIs for security vulnerabilities and generates comprehensive, professional reports in multiple formats.
+
+## 🎉 What's New in v2.0
+
+### New Scanners
+- **XXE (XML External Entity) Scanner** - Detect XXE injection vulnerabilities
+- **Command Injection Scanner** - Find OS command execution flaws
+- **Directory Traversal Scanner** - Detect path traversal vulnerabilities
+- **Mass Assignment Scanner** - Identify object property injection
+- **Parameter Pollution Scanner** - Find HTTP parameter pollution issues
+- **Template Injection Scanner** - Detect SSTI (Server-Side Template Injection)
+- **GraphQL Scanner** - Test GraphQL-specific vulnerabilities
+- **File Upload Scanner** - Check for malicious file upload vulnerabilities
+- **CORS Scanner** - Detect CORS misconfigurations
+
+### New Features
+- **API Discovery** - Automatically discover API endpoints
+- **WAF Detection** - Detect and handle Web Application Firewalls
+- **Multi-threading** - Faster parallel scanning
+- **Proxy Support** - Integrate with Burp Suite, Zap, etc.
+- **API Fuzzing** - Advanced fuzzing capabilities
+- **OpenAPI/Swagger Import** - Test from API specifications
+- **Enhanced JWT Testing** - More comprehensive JWT security checks
+- **Save/Load Results** - Save and compare scan results
+- **PDF Export** - Generate professional PDF reports
+- **Better Logging** - File logging support
 
 ## ✨ Features
 
-### 🔍 Vulnerability Scanners
+### 🔍 Vulnerability Scanners (14 Total)
 
-- **SQL Injection Scanner**
-  - Error-based SQL Injection detection
-  - Blind SQL Injection (time-based)
-  - Union-based SQL Injection
+#### Injection Scanners
+- **SQL Injection Scanner** - Error-based, blind, union-based SQLi
+- **XSS Scanner** - Reflected, stored, DOM-based XSS
+- **XXE Scanner** - XML External Entity injection
+- **Command Injection Scanner** - OS command execution
+- **Template Injection Scanner** - SSTI detection (Jinja2, Twig, Freemarker, etc.)
+- **Directory Traversal Scanner** - Path traversal detection
 
-- **XSS (Cross-Site Scripting) Scanner**
-  - Reflected XSS detection
-  - Stored XSS indicators
-  - DOM-based XSS patterns
+#### API-Specific Scanners
+- **SSRF Scanner** - Server-Side Request Forgery
+- **GraphQL Scanner** - GraphQL introspection & query depth
+- **Mass Assignment Scanner** - Object property injection
+- **Parameter Pollution Scanner** - HTTP parameter pollution
+- **File Upload Scanner** - Malicious file detection
+- **CORS Scanner** - CORS misconfiguration
 
-- **SSRF (Server-Side Request Forgery) Scanner**
-  - Internal network access detection
-  - AWS metadata endpoint testing
-  - Local file access via file:// protocol
+#### Authentication & Security
+- **Authentication Scanner** - JWT analysis, rate limiting, auth bypass
+- **Security Headers Scanner** - Missing security headers detection
 
-- **Authentication & Authorization Scanner**
-  - Broken authentication detection
-  - Session fixation testing
-  - JWT security issues
-  - IDOR (Insecure Direct Object Reference)
-  - Rate limiting verification
+### 🚀 Advanced Features
 
-- **Security Headers Scanner**
-  - Missing security headers detection
-  - Information disclosure via headers analysis
-  - Best practices recommendations
+- **API Discovery** - Automatic endpoint enumeration
+- **WAF Detection** - Cloudflare, AWS WAF, Akamai, etc.
+- **Multi-threading** - Configurable parallel scanning (default: 5 threads)
+- **Proxy Support** - HTTP/HTTPS proxy for Burp/Zap integration
+- **API Fuzzing** - Smart payload generation
+- **OpenAPI Import** - Test from Swagger/OpenAPI specs
+- **Save/Load/Diff** - Save results and compare scans
 
 ### 📊 Report Formats
 
-- **HTML Report** - Interactive, professional HTML report with color-coded severity indicators
-- **JSON Report** - Machine-readable format for integration with other tools
-- **TXT Report** - Human-readable plain text format
+- **HTML Report** - Interactive, professional with severity colors
+- **JSON Report** - Machine-readable for CI/CD integration
+- **TXT Report** - Human-readable plain text
+- **PDF Report** - Professional PDF format (requires weasyprint)
 
 ## 📦 Installation
 
@@ -55,6 +85,9 @@ cd tungkuapi
 # Install dependencies
 pip install -r requirements.txt
 
+# (Optional) For PDF reports
+pip install weasyprint
+
 # Make it executable (Linux/Mac)
 chmod +x tungkuapi.py
 ```
@@ -63,14 +96,12 @@ chmod +x tungkuapi.py
 
 - Python 3.7 or higher
 - pip
+- Optional: weasyprint (for PDF reports)
 
 ## 🚀 Quick Start
 
 ```bash
-# Run demo to see sample reports
-python3 demo.py
-
-# Full scan on target API
+# Full scan with all features
 python3 tungkuapi.py -u https://api.example.com
 
 # With verbose output
@@ -78,6 +109,9 @@ python3 tungkuapi.py -u https://api.example.com -v
 
 # Generate all report formats
 python3 tungkuapi.py -u https://api.example.com -f all
+
+# Multi-threaded scan (10 threads)
+python3 tungkuapi.py -u https://api.example.com --threads 10
 ```
 
 ## 💡 Usage Examples
@@ -85,11 +119,14 @@ python3 tungkuapi.py -u https://api.example.com -f all
 ### Basic Scan
 
 ```bash
-# Scan without authentication
+# Full scan on target API
 python3 tungkuapi.py -u https://api.example.com
+
+# Specific scanners only
+python3 tungkuapi.py -u https://api.example.com -s sqli,xss,xxe
 ```
 
-### Scan with Authentication
+### With Authentication
 
 ```bash
 # Using Bearer token
@@ -101,45 +138,76 @@ python3 tungkuapi.py -u https://api.example.com \
   -H "X-API-Key: key123"
 ```
 
-### Specific Scanner
+### Advanced Features
 
 ```bash
-# SQL Injection only
-python3 tungkuapi.py -u https://api.example.com -s sqli
+# With proxy (Burp Suite)
+python3 tungkuapi.py -u https://api.example.com --proxy http://127.0.0.1:8080
 
-# XSS only
-python3 tungkuapi.py -u https://api.example.com -s xss
+# Import OpenAPI spec
+python3 tungkuapi.py -u https://api.example.com --openapi swagger.json
 
-# Authentication issues only
-python3 tungkuapi.py -u https://api.example.com -s auth
+# Enable fuzzing
+python3 tungkuapi.py -u https://api.example.com --fuzz
+
+# Save and load results
+python3 tungkuapi.py -u https://api.example.com --save scan1.json
+python3 tungkuapi.py --load scan1.json --diff scan2.json
+
+# Multi-threaded with delay
+python3 tungkuapi.py -u https://api.example.com --threads 10 --delay 0.5
 ```
 
-### Configuration File
+### API Discovery
 
 ```bash
-# Create config from template
-cp config.example.json myconfig.json
+# Run only API discovery
+python3 tungkuapi.py -u https://api.example.com -s discovery
 
-# Run with config
-python3 tungkuapi.py -u https://api.example.com -c myconfig.json
+# Run fuzzing on discovered endpoints
+python3 tungkuapi.py -u https://api.example.com -s fuzz
 ```
 
 ## 🔧 Command Line Options
 
 ```
-usage: tungkuapi.py [-h] -u URL [-s {sqli,xss,ssrf,auth,headers,all}]
-                    [-t TOKEN] [-H HEADER] [-o OUTPUT]
-                    [-f {html,json,txt,all}] [-c CONFIG] [-v]
-                    [--no-report]
+usage: tungkuapi.py [-h] -u URL [-s SCAN_TYPES] [--fuzz] [-t TOKEN]
+                    [-H HEADER] [--proxy PROXY] [--timeout TIMEOUT]
+                    [--threads THREADS] [--delay DELAY] [-c CONFIG]
+                    [-o OUTPUT] [-f {html,json,txt,pdf,all}]
+                    [--save FILE] [--load FILE] [--diff FILE]
+                    [-v] [--no-report]
 
-Arguments:
-  -u, --url              Target API URL (required)
-  -s, --scan             Scan type: sqli, xss, ssrf, auth, headers, all (default: all)
-  -t, --token            Authentication token (e.g., 'Bearer TOKEN')
-  -H, --header           Custom headers (format: 'Name: Value')
-  -o, --output           Output directory for reports (default: reports)
-  -f, --format           Report format: html, json, txt, all (default: html)
-  -c, --config           Configuration file (JSON)
+Target Options:
+  -u, --url URL          Target API URL
+  --openapi FILE         Import OpenAPI/Swagger spec
+
+Scan Options:
+  -s, --scan SCAN_TYPES  Scan types (comma-separated):
+                         sqli, xss, ssrf, auth, headers, xxe, cmdi,
+                         dirtrav, massassign, parampoll, template,
+                         graphql, fileupload, cors, discovery, fuzz
+  --fuzz                 Enable API fuzzing
+
+Authentication & Headers:
+  -t, --token TOKEN      Authentication token
+  -H, --header HEADER    Custom headers (format: 'Name: Value')
+
+Network Options:
+  --proxy PROXY          Proxy URL (e.g., http://127.0.0.1:8080)
+  --timeout SECONDS      Request timeout (default: 10)
+  --threads NUM          Number of threads (default: 5)
+  --delay SECONDS        Delay between requests (default: 0)
+
+Config & Output:
+  -c, --config FILE      Configuration file (JSON)
+  -o, --output DIR       Output directory (default: reports)
+  -f, --format FORMAT    Report format: html, json, txt, pdf, all
+  --save FILE            Save scan results to file
+  --load FILE            Load scan results from file
+  --diff FILE            Compare with previous scan results
+
+Behavior:
   -v, --verbose          Verbose output
   --no-report            Skip report generation
 ```
@@ -151,48 +219,29 @@ Arguments:
 | `sqli` | SQL Injection Scanner |
 | `xss` | Cross-Site Scripting Scanner |
 | `ssrf` | Server-Side Request Forgery Scanner |
+| `xxe` | XML External Entity Scanner |
+| `cmdi` | Command Injection Scanner |
+| `dirtrav` | Directory Traversal Scanner |
+| `massassign` | Mass Assignment Scanner |
+| `parampoll` | Parameter Pollution Scanner |
+| `template` | Template Injection Scanner (SSTI) |
+| `graphql` | GraphQL Security Scanner |
+| `fileupload` | File Upload Scanner |
+| `cors` | CORS Misconfiguration Scanner |
 | `auth` | Authentication & Authorization Scanner |
 | `headers` | Security Headers Scanner |
+| `discovery` | API Discovery Only |
+| `fuzz` | API Fuzzing Only |
 | `all` | Run all scanners (default) |
-
-## 📝 Report Sample
-
-### Executive Summary
-
-```
-================================================================================
-                   TUNGKUAPI - API SECURITY ASSESSMENT REPORT
-================================================================================
-
-Target URL     : https://api.example.com
-Scan Date      : 2026-01-20T14:30:00
-Total Issues   : 8
-
-SEVERITY BREAKDOWN
---------------------------------------------------------------------------------
-  CRITICAL : 2
-  HIGH     : 3
-  MEDIUM   : 2
-  LOW      : 1
-```
-
-### HTML Report Features
-
-- 📊 Visual dashboard with severity breakdown
-- 🎨 Color-coded vulnerability cards
-- 🔍 Detailed exploitation evidence
-- 🛡️ Remediation recommendations
-- 📱 Responsive design
-- 🖨️ Print-ready format
 
 ## 📁 Project Structure
 
 ```
 tungkuapi/
-├── tungkuapi.py          # Main entry point
-├── scanners.py           # Vulnerability scanners
-├── reporter.py           # Report generators
-├── utils.py              # Utility functions
+├── tungkuapi.py          # Main entry point (v2.0)
+├── scanners.py           # All vulnerability scanners
+├── reporter.py           # Report generators (HTML, JSON, TXT, PDF)
+├── utils.py              # Utility functions, API discovery, WAF detection, Fuzzer
 ├── demo.py               # Demo script
 ├── requirements.txt      # Dependencies
 ├── config.example.json   # Configuration template
@@ -202,9 +251,29 @@ tungkuapi/
 └── reports/             # Generated reports directory
 ```
 
+## 🎯 Workflow
+
+```
+1. WAF Detection
+   ↓
+2. API Discovery
+   ↓
+3. Multi-threaded Scanning (All scanners in parallel)
+   ↓
+4. Fuzzing (if enabled)
+   ↓
+5. Report Generation
+```
+
 ## 🛡️ Disclaimer
 
 This tool is created for educational purposes and authorized security testing only. Users are fully responsible for how they use this tool. Only use it on systems you have permission to test.
+
+**IMPORTANT:**
+- Only test APIs you own or have explicit permission to test
+- Respect rate limits and avoid causing service disruption
+- Follow responsible disclosure practices for vulnerabilities found
+- This tool may trigger security alerts and WAF rules
 
 ## 📜 License
 
@@ -235,8 +304,15 @@ If you find this tool useful, please consider giving it a star!
 - **[PANDUAN.md](PANDUAN.md)** - Complete guide in Indonesian
 - **[CHEATSHEET.md](CHEATSHEET.md)** - Quick reference commands
 
+## 🔗 Related Tools
+
+- [OWASP ZAP](https://www.zaproxy.org/) - Web application security scanner
+- [Burp Suite](https://portswigger.net/burp) - Web security testing tool
+- [SQLMap](http://sqlmap.org/) - Automated SQL injection tool
+
 ---
 
 **Happy Hunting! 🔥**
 
 > Made with ❤️ by [Re-xist](https://github.com/Re-xist)
+> Version 2.0 - Advanced API Penetration Testing Tool

