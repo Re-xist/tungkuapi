@@ -1,13 +1,31 @@
-# 🔥 TungkuApi v2.0
+# 🔥 TungkuApi v3.0
 
 > **Advanced API Penetration Testing CLI Tool** - Comprehensive security scanner with detailed reporting
 
 [![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-2.0-orange.svg)](https://github.com/Re-xist/tungkuapi)
+[![Version](https://img.shields.io/badge/Version-3.0-orange.svg)](https://github.com/Re-xist/tungkuapi)
 [![Author](https://img.shields.io/badge/Author-Re--xist-red.svg)](https://github.com/Re-xist)
 
-**TungkuApi v2.0** is an advanced command-line interface tool for API penetration testing. It automatically scans APIs for security vulnerabilities and generates comprehensive, professional reports in multiple formats.
+**TungkuApi v3.0** is an advanced command-line interface tool for API penetration testing. It automatically scans APIs for security vulnerabilities and generates comprehensive, professional reports in multiple formats.
+
+## 🎉 What's New in v3.0
+
+### New Scanners
+- **JWT Analyzer** - Comprehensive JWT token security analysis (algorithm, claims, expiration)
+- **Rate Limit Detector** - Detect rate limiting and identify bypass opportunities
+
+### New Features
+- **SQLite Database** - Optional historical tracking of scan results
+- **Trend Analysis** - Track vulnerability trends over time
+- **Scan Comparison** - Compare two scans to see improvements
+- **Historical Reports** - View scan history for any target
+- **Database Export** - Export all scan data to JSON
+
+### Enhanced Features
+- **Professional HTML Reports** - Dark mode with CVSS scoring
+- **Unique Vulnerability IDs** - Track vulnerabilities across scans
+- **Detailed Evidence** - Request/response details for each finding
 
 ## 🎉 What's New in v2.0
 
@@ -36,7 +54,7 @@
 
 ## ✨ Features
 
-### 🔍 Vulnerability Scanners (17 Total)
+### 🔍 Vulnerability Scanners (19 Total)
 
 #### Injection Scanners
 - **SQL Injection Scanner** - Error-based, blind, union-based SQLi
@@ -56,6 +74,8 @@
 
 #### Authentication & Security
 - **Authentication Scanner** - JWT analysis, rate limiting, auth bypass
+- **JWT Scanner** - JWT token security analysis (NEW v3.0)
+- **Rate Limit Scanner** - Rate limiting detection & bypass testing (NEW v3.0)
 - **Security Headers Scanner** - Missing security headers detection
 
 #### External Tools Integration
@@ -72,6 +92,7 @@
 - **API Fuzzing** - Smart payload generation
 - **OpenAPI Import** - Test from Swagger/OpenAPI specs
 - **Save/Load/Diff** - Save results and compare scans
+- **Historical Tracking** - SQLite database for trend analysis (NEW v3.0)
 
 ### 📊 Report Formats
 
@@ -195,6 +216,28 @@ python3 tungkuapi.py --load scan1.json --diff scan2.json
 python3 tungkuapi.py -u https://api.example.com --threads 10 --delay 0.5
 ```
 
+### Historical Tracking & Trend Analysis (NEW v3.0)
+
+```bash
+# Enable database and save scan results
+python3 tungkuapi.py -u https://api.example.com --db scans.db --save-db
+
+# View scan history for a target
+python3 tungkuapi.py --history https://api.example.com --db scans.db
+
+# Show trend analysis (last 30 days)
+python3 tungkuapi.py --trend https://api.example.com --db scans.db
+
+# Custom trend period (last 90 days)
+python3 tungkuapi.py --trend https://api.example.com --trend-days 90 --db scans.db
+
+# Compare two scans
+python3 tungkuapi.py --compare TUNGKU-20250126-143022-a1b2c3d4 TUNGKU-20250127-153145-e5f6g7h8 --db scans.db
+
+# Export database to JSON
+python3 tungkuapi.py --export-db backup.json --db scans.db
+```
+
 ### External Tools Scanning
 
 ```bash
@@ -288,6 +331,9 @@ usage: tungkuapi.py [-h] -u URL [-s SCAN_TYPES] [--fuzz] [-t TOKEN]
                     [-o OUTPUT] [-f {html,json,txt,pdf,all}]
                     [-w WORDLIST] [--download-seclists]
                     [--save FILE] [--load FILE] [--diff FILE]
+                    [--db DB_FILE] [--save-db] [--history TARGET]
+                    [--trend TARGET] [--trend-days DAYS]
+                    [--compare SCAN1 SCAN2] [--export-db FILE]
                     [-v] [--no-report]
 
 Target Options:
@@ -296,11 +342,21 @@ Target Options:
 
 Scan Options:
   -s, --scan SCAN_TYPES     Scan types (comma-separated):
-                           sqli, xss, ssrf, auth, headers, xxe, cmdi,
-                           dirtrav, massassign, parampoll, template,
-                           graphql, fileupload, cors, discovery, fuzz
+                           sqli, xss, ssrf, auth, headers, jwt, ratelimit,
+                           xxe, cmdi, dirtrav, massassign, parampoll,
+                           template, graphql, fileupload, cors, nuclei,
+                           ghauri, external, discovery, fuzz
   --fuzz                    Enable API fuzzing
   -w, --wordlist WORDLIST   Custom wordlist file for API discovery
+
+Database & History (NEW v3.0):
+  --db, --database DB_FILE  SQLite database path for historical tracking
+  --save-db                 Save scan results to database
+  --history TARGET          Show scan history for a target
+  --trend, --trend-analysis TARGET  Show trend analysis for a target
+  --trend-days DAYS         Days for trend analysis (default: 30)
+  --compare SCAN1 SCAN2     Compare two scans by ID
+  --export-db FILE          Export database to JSON file
 
 SecLists Integration:
   --download-seclists       Download SecLists wordlists from GitHub
@@ -345,6 +401,8 @@ Behavior:
 | `fileupload` | File Upload Scanner |
 | `cors` | CORS Misconfiguration Scanner |
 | `auth` | Authentication & Authorization Scanner |
+| `jwt` | JWT Token Security Analyzer (NEW v3.0) |
+| `ratelimit` | Rate Limit Detector & Bypass Tester (NEW v3.0) |
 | `headers` | Security Headers Scanner |
 | `nuclei` | Nuclei Scanner (requires Nuclei installed) |
 | `ghauri` | Ghauri Scanner (requires Ghauri installed) |
@@ -434,4 +492,4 @@ If you find this tool useful, please consider giving it a star!
 **Happy Hunting! 🔥**
 
 > Made with ❤️ by [Re-xist](https://github.com/Re-xist)
-> Version 2.0 - Advanced API Penetration Testing Tool
+> Version 3.0 - Advanced API Penetration Testing Tool

@@ -5,7 +5,7 @@ Comprehensive security scanner with detailed reporting
 
 Author: Re-xist
 GitHub: https://github.com/Re-xist
-Version: 2.0
+Version: 3.0
 License: MIT
 """
 
@@ -13,6 +13,7 @@ import argparse
 import sys
 import json
 import os
+import uuid
 from datetime import datetime
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -25,14 +26,17 @@ from scanners import (
     GraphQLScanner, FileUploadScanner, CORSScanner,
     NucleiScanner, GhauriScanner, ExternalToolsScanner
 )
+from jwt_analyzer import JWTScanner
+from ratelimit_scanner import RateLimitScanner
 from reporter import ReportGenerator
 from utils import APIClient, Logger, APIDiscovery, WAFDetector, Fuzzer, download_seclists
+from database import ScanDatabase
 
 
 class TungkuApi:
-    """TungkuApi - API Pentest Tool Utama v2.0"""
+    """TungkuApi - API Pentest Tool Utama v3.0"""
 
-    def __init__(self, target, output_dir="reports", verbose=False, threads=5):
+    def __init__(self, target, output_dir="reports", verbose=False, threads=5, db_path=None):
         self.target = target
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
@@ -44,6 +48,16 @@ class TungkuApi:
         self.api_discovery = APIDiscovery(self.client, self.logger)
         self.fuzzer = Fuzzer(self.client, self.logger)
 
+        # Database (optional)
+        self.db = None
+        self.db_path = db_path
+        if db_path:
+            try:
+                self.db = ScanDatabase(db_path)
+                self.logger.info(f"✓ Database enabled: {db_path}")
+            except Exception as e:
+                self.logger.warning(f"Could not initialize database: {e}")
+
         self.results = {
             "target": target,
             "scan_date": datetime.now().isoformat(),
@@ -51,8 +65,12 @@ class TungkuApi:
             "info": [],
             "discovered_endpoints": [],
             "waf_detected": False,
-            "summary": {}
+            "summary": {},
+            "scanners_used": []
         }
+
+        # Generate unique scan ID
+        self.scan_id = f"TUNGKU-{datetime.now().strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:8]}"
 
         self.lock = threading.Lock()
         self._scan_progress = {"completed": 0, "total": 0}
@@ -95,6 +113,8 @@ class TungkuApi:
             "graphql": GraphQLScanner,
             "fileupload": FileUploadScanner,
             "cors": CORSScanner,
+            "jwt": JWTScanner,
+            "ratelimit": RateLimitScanner,
             "nuclei": NucleiScanner,
             "ghauri": GhauriScanner,
             "external": ExternalToolsScanner
@@ -278,13 +298,13 @@ class TungkuApi:
                 emoji = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢", "info": "🔵"}
                 self.logger.info(f"  {emoji.get(severity, '⚪')} {severity.upper()}: {count}")
 
-    def generate_report(self, format="html"):
+    def generate_report(self, format="html", save_to_db=False):
         """Generate security report"""
         # Extract target name from URL for report filename
         from urllib.parse import urlparse
         parsed_url = urlparse(self.target)
         target_name = parsed_url.netloc.replace('.', '_') if parsed_url.netloc else 'target'
-        
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         report_file = self.output_dir / f"{target_name}_scan_{timestamp}"
 
@@ -309,6 +329,18 @@ class TungkuApi:
             pdf_file = str(report_file) + ".pdf"
             generator.generate_pdf(pdf_file)
             self.logger.info(f"[✓] PDF report saved: {pdf_file}")
+
+        # Save to database if enabled
+        if save_to_db and self.db:
+            try:
+                # Calculate scan duration
+                scan_date = datetime.fromisoformat(self.results["scan_date"])
+                duration = (datetime.now() - scan_date).total_seconds()
+
+                self.db.save_scan(self.scan_id, self.results, duration)
+                self.logger.success(f"[✓] Scan saved to database: {self.scan_id}")
+            except Exception as e:
+                self.logger.error(f"[✗] Failed to save to database: {e}")
 
     def save_results(self, filename):
         """Save scan results to file"""
@@ -401,7 +433,7 @@ def main():
 
     # Scan options
     parser.add_argument("-s", "--scan",
-                       help="Scan types (comma-separated): sqli,xss,ssrf,auth,headers,xxe,cmdi,dirtrav,massassign,parampoll,template,graphql,fileupload,cors,nuclei,ghauri,external,discovery,fuzz")
+                       help="Scan types (comma-separated): sqli,xss,ssrf,auth,headers,jwt,ratelimit,xxe,cmdi,dirtrav,massassign,parampoll,template,graphql,fileupload,cors,nuclei,ghauri,external,discovery,fuzz")
     parser.add_argument("--fuzz", action="store_true",
                        help="Enable API fuzzing")
     parser.add_argument("-w", "--wordlist", metavar="FILE",
@@ -437,6 +469,22 @@ def main():
     parser.add_argument("--diff", metavar="FILE",
                        help="Compare with previous scan results")
 
+    # Database & History (NEW v3.0)
+    parser.add_argument("--db", "--database", metavar="DB_FILE",
+                       help="SQLite database path for historical tracking (default: tungkuapi.db)")
+    parser.add_argument("--save-db", action="store_true",
+                       help="Save scan results to database")
+    parser.add_argument("--history", metavar="TARGET",
+                       help="Show scan history for a target")
+    parser.add_argument("--trend", "--trend-analysis", metavar="TARGET",
+                       help="Show trend analysis for a target")
+    parser.add_argument("--trend-days", type=int, default=30,
+                       help="Days for trend analysis (default: 30)")
+    parser.add_argument("--compare", nargs=2, metavar=("SCAN1", "SCAN2"),
+                       help="Compare two scans by ID")
+    parser.add_argument("--export-db", metavar="FILE",
+                       help="Export database to JSON file")
+
     # Behavior
     parser.add_argument("-v", "--verbose", action="store_true",
                        help="Verbose output")
@@ -446,6 +494,108 @@ def main():
                        help="Disable colored output")
 
     args = parser.parse_args()
+
+    # Handle database/history/trending commands (NEW v3.0)
+    if args.history:
+        # Show scan history
+        db_path = args.db or "tungkuapi.db"
+        try:
+            with ScanDatabase(db_path) as db:
+                history = db.get_scan_history(args.history, limit=20)
+                print(f"\n{'='*80}")
+                print(f"📜 SCAN HISTORY FOR: {args.history}")
+                print(f"{'='*80}\n")
+
+                if not history:
+                    print("No scan history found.")
+                else:
+                    for scan in history:
+                        print(f"\nScan ID: {scan['scan_id']}")
+                        print(f"Date: {scan['scan_date']}")
+                        print(f"Total Vulns: {scan['total_vulnerabilities']} "
+                              f"(C:{scan['critical_count']} H:{scan['high_count']} "
+                              f"M:{scan['medium_count']} L:{scan['low_count']})")
+                        print(f"WAF Detected: {scan['waf_detected']}")
+                        print(f"Endpoints: {scan['discovered_endpoints']}")
+                print(f"\n{'='*80}")
+        except Exception as e:
+            print(f"[ERROR] {e}")
+        sys.exit(0)
+
+    if args.trend:
+        # Show trend analysis
+        db_path = args.db or "tungkuapi.db"
+        try:
+            with ScanDatabase(db_path) as db:
+                trend = db.get_trend_analysis(args.trend, args.trend_days)
+                print(f"\n{'='*80}")
+                print(f"📈 TREND ANALYSIS: {trend['target_url']}")
+                print(f"Period: Last {trend['period_days']} days")
+                print(f"{'='*80}\n")
+
+                if not trend["data"]:
+                    print("No trend data available.")
+                else:
+                    # Summary
+                    summary = trend["summary"]
+                    print(f"\nTrend: {summary['trend'].upper()}")
+                    print(f"Improvement: {summary['improvement_percent']:.1f}%")
+                    print(f"First Half Avg: {summary['first_half_avg']:.2f} vulns/day")
+                    print(f"Second Half Avg: {summary['second_half_avg']:.2f} vulns/day")
+
+                    # Daily breakdown
+                    print(f"\nDaily Breakdown:")
+                    print(f"{'Date':<20} {'Critical':<10} {'High':<10} {'Medium':<10} {'Low':<10} {'Total':<10}")
+                    print("-" * 70)
+                    for day_data in trend["data"][:14]:  # Show last 14 days
+                        date = day_data["scan_date"]
+                        print(f"{date:<20} {day_data['critical']:<10} {day_data['high']:<10} "
+                              f"{day_data['medium']:<10} {day_data['low']:<10} {day_data['total']:<10}")
+                print(f"\n{'='*80}")
+        except Exception as e:
+            print(f"[ERROR] {e}")
+        sys.exit(0)
+
+    if args.compare:
+        # Compare two scans
+        db_path = args.db or "tungkuapi.db"
+        try:
+            with ScanDatabase(db_path) as db:
+                comparison = db.get_scan_comparison(args.compare[0], args.compare[1])
+                print(f"\n{'='*80}")
+                print("📊 SCAN COMPARISON")
+                print(f"{'='*80}\n")
+
+                print(f"\nScan 1:")
+                print(f"  ID: {comparison['scan1']['scan_id']}")
+                print(f"  Date: {comparison['scan1']['scan_date']}")
+                print(f"  Total: {comparison['scan1']['total_vulnerabilities']}")
+
+                print(f"\nScan 2:")
+                print(f"  ID: {comparison['scan2']['scan_id']}")
+                print(f"  Date: {comparison['scan2']['scan_date']}")
+                print(f"  Total: {comparison['scan2']['total_vulnerabilities']}")
+
+                print(f"\nChanges:")
+                print(f"  Fixed Vulnerabilities: {comparison['fixed_vulnerabilities']} ✓")
+                print(f"  New Vulnerabilities: {comparison['new_vulnerabilities']} ⚠️")
+                print(f"  Remaining Vulnerabilities: {comparison['remaining_vulnerabilities']}")
+                print(f"  Net Improvement: {comparison['improvement']} {'✓ Improved' if comparison['improvement'] > 0 else '✗ Degraded' if comparison['improvement'] < 0 else '= No Change'}")
+                print(f"\n{'='*80}")
+        except Exception as e:
+            print(f"[ERROR] {e}")
+        sys.exit(0)
+
+    if args.export_db:
+        # Export database to JSON
+        db_path = args.db or "tungkuapi.db"
+        try:
+            with ScanDatabase(db_path) as db:
+                db.export_to_json(args.export_db)
+                print(f"\n[✓] Database exported to: {args.export_db}")
+        except Exception as e:
+            print(f"[ERROR] {e}")
+        sys.exit(0)
 
     # Load or run scan
     if args.load:
@@ -525,7 +675,7 @@ def main():
     config["delay"] = args.delay
 
     # Run scan
-    tool = TungkuApi(args.url, args.output, args.verbose, args.threads)
+    tool = TungkuApi(args.url, args.output, args.verbose, args.threads, args.db)
 
     # Set proxy if configured
     if args.proxy:
@@ -545,7 +695,7 @@ def main():
 
         # Generate report
         if not args.no_report:
-            tool.generate_report(args.format)
+            tool.generate_report(args.format, save_to_db=args.save_db)
 
         # Exit with code based on findings
         critical_count = results["summary"].get("critical", 0)
