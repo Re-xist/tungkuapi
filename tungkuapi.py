@@ -14,6 +14,7 @@ import sys
 import json
 import os
 import uuid
+import getpass
 from datetime import datetime
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -31,6 +32,7 @@ from ratelimit_scanner import RateLimitScanner
 from reporter import ReportGenerator
 from utils import APIClient, Logger, APIDiscovery, WAFDetector, Fuzzer, download_seclists
 from database import ScanDatabase
+from credentials import CredentialManager
 
 
 class TungkuApi:
@@ -485,6 +487,21 @@ def main():
     parser.add_argument("--export-db", metavar="FILE",
                        help="Export database to JSON file")
 
+    # Credential Management (NEW v3.0)
+    cred_group = parser.add_argument_group("Credential Management")
+    cred_group.add_argument("--set-cred", metavar="PROFILE",
+                           help="Set/create credential profile interactively")
+    cred_group.add_argument("--list-cred", action="store_true",
+                           help="List all credential profiles")
+    cred_group.add_argument("--show-cred", metavar="PROFILE",
+                           help="Show credential profile details")
+    cred_group.add_argument("--del-cred", metavar="PROFILE",
+                           help="Delete a credential profile")
+    cred_group.add_argument("--use-cred", metavar="PROFILE",
+                           help="Use specific credential profile for scan")
+    cred_group.add_argument("--set-default-cred", metavar="PROFILE",
+                           help="Set default credential profile")
+
     # Behavior
     parser.add_argument("-v", "--verbose", action="store_true",
                        help="Verbose output")
@@ -494,6 +511,181 @@ def main():
                        help="Disable colored output")
 
     args = parser.parse_args()
+
+    # Handle credential management commands (NEW v3.0)
+    cred_manager = CredentialManager()
+
+    if args.set_cred:
+        # Set/create credential profile interactively
+        profile_name = args.set_cred
+        print(f"\n{'='*80}")
+        print(f"🔐 Setting up credential profile: {profile_name}")
+        print(f"{'='*80}\n")
+
+        credentials = {}
+        credentials['description'] = input("Description (optional): ").strip()
+
+        print("\n--- Authentication Options ---")
+        print("1. JWT Token")
+        print("2. Username/Password")
+        print("3. API Key")
+        print("4. Session Token")
+        print("5. Custom Headers")
+        print("Select options (comma-separated, e.g., 1,3): ")
+
+        choices = input().strip().split(',')
+
+        # JWT Token
+        if '1' in choices:
+            jwt_token = input("JWT Token: ").strip()
+            if jwt_token:
+                credentials['jwt_token'] = jwt_token
+
+        # Username/Password
+        if '2' in choices:
+            credentials['username'] = input("Username: ").strip()
+            credentials['password'] = getpass.getpass("Password: ")
+
+        # API Key
+        if '3' in choices:
+            api_key = input("API Key: ").strip()
+            if api_key:
+                credentials['api_key'] = api_key
+                header_name = input("API Key Header Name (default: X-API-Key): ").strip()
+                credentials['api_key_header'] = header_name if header_name else "X-API-Key"
+
+        # Session Token
+        if '4' in choices:
+            session_token = input("Session Token: ").strip()
+            if session_token:
+                credentials['session_token'] = session_token
+
+        # Custom Headers
+        if '5' in choices:
+            print("\nEnter custom headers (format: 'Name: Value', empty line to finish):")
+            headers = {}
+            while True:
+                header_line = input("> ").strip()
+                if not header_line:
+                    break
+                if ':' in header_line:
+                    name, value = header_line.split(':', 1)
+                    headers[name.strip()] = value.strip()
+            if headers:
+                credentials['headers'] = headers
+
+        # Save profile
+        if cred_manager.save_profile(profile_name, credentials):
+            print(f"\n[✓] Credential profile '{profile_name}' saved successfully!")
+            print(f"\n[💡] Usage:")
+            print(f"  python tungkuapi.py -u https://api.example.com --use-cred {profile_name}")
+        else:
+            print(f"\n[✗] Failed to save profile.")
+
+        # Ask if set as default
+        set_default = input(f"\nSet '{profile_name}' as default profile? (y/N): ").strip().lower()
+        if set_default == 'y':
+            if cred_manager.set_default_profile(profile_name):
+                print(f"[✓] '{profile_name}' set as default profile")
+
+        sys.exit(0)
+
+    if args.list_cred:
+        # List all credential profiles
+        profiles = cred_manager.list_profiles()
+
+        print(f"\n{'='*80}")
+        print(f"🔐 CREDENTIAL PROFILES")
+        print(f"{'='*80}\n")
+
+        if not profiles:
+            print("No credential profiles found.")
+            print(f"\n[💡] Create one with: --set-cred <profile_name>")
+        else:
+            default_profile = cred_manager.get_default_profile()
+
+            for profile in profiles:
+                is_default = " (DEFAULT)" if profile['name'] == default_profile else ""
+                print(f"\n📌 {profile['name']}{is_default}")
+                if profile['description']:
+                    print(f"   Description: {profile['description']}")
+                if profile['username']:
+                    print(f"   Username: {profile['username']}")
+                print(f"   Has Password: {'Yes' if profile['has_password'] else 'No'}")
+                print(f"   Has JWT: {'Yes' if profile['has_jwt'] else 'No'}")
+                print(f"   Has API Key: {'Yes' if profile['has_api_key'] else 'No'}")
+
+        print(f"\n{'='*80}")
+        sys.exit(0)
+
+    if args.show_cred:
+        # Show credential profile details
+        profile_name = args.show_cred
+        profile = cred_manager.load_profile(profile_name)
+
+        if not profile:
+            print(f"[ERROR] Profile '{profile_name}' not found.")
+            sys.exit(1)
+
+        print(f"\n{'='*80}")
+        print(f"🔐 CREDENTIAL PROFILE: {profile_name}")
+        print(f"{'='*80}\n")
+
+        if profile.get('description'):
+            print(f"Description: {profile['description']}")
+
+        if profile.get('username'):
+            print(f"Username: {profile['username']}")
+
+        if profile.get('password'):
+            print(f"Password: {'*' * len(profile['password'])}")
+
+        if profile.get('jwt_token'):
+            token = profile['jwt_token']
+            print(f"JWT Token: {token[:20]}...{token[-20:]}")
+
+        if profile.get('api_key'):
+            key = profile['api_key']
+            header = profile.get('api_key_header', 'X-API-Key')
+            print(f"API Key ({header}): {key[:10]}...{key[-5:]}")
+
+        if profile.get('session_token'):
+            token = profile['session_token']
+            print(f"Session Token: {token[:15]}...{token[-10:]}")
+
+        if profile.get('headers'):
+            print(f"\nCustom Headers:")
+            for name, value in profile['headers'].items():
+                print(f"  {name}: {value}")
+
+        print(f"\n{'='*80}")
+        sys.exit(0)
+
+    if args.del_cred:
+        # Delete credential profile
+        profile_name = args.del_cred
+
+        # Confirm
+        confirm = input(f"Delete profile '{profile_name}'? (y/N): ").strip().lower()
+        if confirm != 'y':
+            print("Cancelled.")
+            sys.exit(0)
+
+        if cred_manager.delete_profile(profile_name):
+            print(f"[✓] Profile '{profile_name}' deleted successfully.")
+        else:
+            print(f"[✗] Profile '{profile_name}' not found.")
+        sys.exit(0)
+
+    if args.set_default_cred:
+        # Set default credential profile
+        profile_name = args.set_default_cred
+
+        if cred_manager.set_default_profile(profile_name):
+            print(f"[✓] '{profile_name}' set as default profile.")
+        else:
+            print(f"[✗] Failed to set default. Profile '{profile_name}' not found.")
+        sys.exit(0)
 
     # Handle database/history/trending commands (NEW v3.0)
     if args.history:
@@ -666,6 +858,54 @@ def main():
         if "headers" not in config:
             config["headers"] = {}
         config["headers"]["Authorization"] = args.token
+
+    # Load credential profile if specified
+    if args.use_cred:
+        profile_name = args.use_cred
+        print(f"\n[🔐] Using credential profile: {profile_name}")
+
+        profile_headers = cred_manager.get_headers_from_profile(profile_name)
+
+        if profile_headers:
+            if "headers" not in config:
+                config["headers"] = {}
+
+            # Merge profile headers with config headers (profile takes precedence)
+            config["headers"].update(profile_headers)
+
+            # Show loaded auth (without showing full tokens)
+            if "Authorization" in profile_headers:
+                auth = profile_headers["Authorization"]
+                print(f"  ✓ Authorization: {auth[:30]}..." if len(auth) > 30 else f"  ✓ Authorization: {auth}")
+
+            if "Cookie" in profile_headers:
+                print(f"  ✓ Session: Configured")
+
+            # Show API key headers
+            for key in profile_headers:
+                if key in ["X-API-Key", "API-Key", "apikey"]:
+                    value = profile_headers[key]
+                    print(f"  ✓ {key}: {value[:15]}..." if len(value) > 15 else f"  ✓ {key}: {value}")
+        else:
+            print(f"[ERROR] Profile '{profile_name}' not found or has no headers.")
+            sys.exit(1)
+    elif cred_manager.get_default_profile():
+        # Use default profile if no specific profile requested
+        profile_name = cred_manager.get_default_profile()
+        print(f"\n[🔐] Using default credential profile: {profile_name}")
+
+        profile_headers = cred_manager.get_headers_from_profile(profile_name)
+
+        if profile_headers:
+            if "headers" not in config:
+                config["headers"] = {}
+
+            # Merge profile headers with config headers (config takes precedence)
+            for key, value in profile_headers.items():
+                if key not in config["headers"]:
+                    config["headers"][key] = value
+
+            print(f"  ✓ Default profile loaded")
 
     # Add proxy to config
     if args.proxy:

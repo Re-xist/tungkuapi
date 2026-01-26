@@ -21,6 +21,7 @@
 - **Scan Comparison** - Compare two scans to see improvements
 - **Historical Reports** - View scan history for any target
 - **Database Export** - Export all scan data to JSON
+- **Credential Management** - Save and manage authentication profiles (JWT, username/password, API keys)
 
 ### Enhanced Features
 - **Professional HTML Reports** - Dark mode with CVSS scoring
@@ -196,6 +197,44 @@ python3 tungkuapi.py -u https://api.example.com \
   -H "X-API-Key: key123"
 ```
 
+### Credential Management (NEW v3.0)
+
+```bash
+# Create a new credential profile (interactive)
+python3 tungkuapi.py --set-cred production
+
+# List all credential profiles
+python3 tungkuapi.py --list-cred
+
+# Show profile details
+python3 tungkuapi.py --show-cred production
+
+# Use a specific profile for scan
+python3 tungkuapi.py -u https://api.example.com --use-cred production
+
+# Set default credential profile
+python3 tungkuapi.py --set-default-cred production
+
+# Delete a profile
+python3 tungkuapi.py --del-cred old-profile
+
+# Scan with default profile (auto-loaded)
+python3 tungkuapi.py -u https://api.example.com
+```
+
+**Supported Authentication Types:**
+- JWT Bearer Tokens
+- Username/Password
+- API Keys (customizable header name)
+- Session Tokens/Cookies
+- Custom Headers
+
+**Credential Storage:**
+- Encrypted storage in `~/.tungkuapi/credentials.json`
+- Encryption key in `~/.tungkuapi/.key`
+- Secure file permissions (0600)
+- Interactive setup wizard
+
 ### Advanced Features
 
 ```bash
@@ -334,7 +373,9 @@ usage: tungkuapi.py [-h] -u URL [-s SCAN_TYPES] [--fuzz] [-t TOKEN]
                     [--db DB_FILE] [--save-db] [--history TARGET]
                     [--trend TARGET] [--trend-days DAYS]
                     [--compare SCAN1 SCAN2] [--export-db FILE]
-                    [-v] [--no-report]
+                    [--set-cred PROFILE] [--list-cred] [--show-cred PROFILE]
+                    [--del-cred PROFILE] [--use-cred PROFILE]
+                    [--set-default-cred PROFILE] [-v] [--no-report]
 
 Target Options:
   -u, --url URL             Target API URL
@@ -349,6 +390,18 @@ Scan Options:
   --fuzz                    Enable API fuzzing
   -w, --wordlist WORDLIST   Custom wordlist file for API discovery
 
+Authentication & Headers:
+  -t, --token TOKEN         Authentication token
+  -H, --header HEADER       Custom headers (format: 'Name: Value')
+
+Credential Management (NEW v3.0):
+  --set-cred PROFILE        Create/set credential profile interactively
+  --list-cred               List all credential profiles
+  --show-cred PROFILE       Show credential profile details
+  --del-cred PROFILE        Delete a credential profile
+  --use-cred PROFILE        Use specific credential profile for scan
+  --set-default-cred PROFILE  Set default credential profile
+
 Database & History (NEW v3.0):
   --db, --database DB_FILE  SQLite database path for historical tracking
   --save-db                 Save scan results to database
@@ -360,10 +413,6 @@ Database & History (NEW v3.0):
 
 SecLists Integration:
   --download-seclists       Download SecLists wordlists from GitHub
-
-Authentication & Headers:
-  -t, --token TOKEN         Authentication token
-  -H, --header HEADER       Custom headers (format: 'Name: Value')
 
 Network Options:
   --proxy PROXY             Proxy URL (e.g., http://127.0.0.1:8080)
