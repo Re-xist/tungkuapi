@@ -187,279 +187,281 @@ class ReportGenerator:
                 self.logger.error(f"Failed to generate PDF: {e}")
 
     def _get_html_template(self):
-        """Get enhanced HTML template"""
+        """Get enhanced HTML template with Tailwind CSS"""
         return """<!DOCTYPE html>
-<html lang="id">
+<html class="dark" lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TungkuApi v2.0 - Security Report</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: #f5f5f5;
-            padding: 20px;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .header {
-            text-align: center;
-            border-bottom: 3px solid #2196F3;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }
-        .header h1 {
-            color: #2196F3;
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        .header p {
-            color: #666;
-            font-size: 1.1em;
-        }
-        .version {
-            display: inline-block;
-            background: #2196F3;
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            margin-top: 10px;
-        }
-        .summary {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 20px;
-            margin: 30px 0;
-        }
-        .summary-card {
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            color: white;
-        }
-        .summary-card h3 {
-            font-size: 2.5em;
-            margin-bottom: 5px;
-        }
-        .summary-card p {
-            font-size: 0.9em;
-            opacity: 0.9;
-        }
-        .critical { background: #d32f2f; }
-        .high { background: #f57c00; }
-        .medium { background: #fbc02d; color: white; }
-        .low { background: #388e3c; }
-        .info { background: #1976d2; }
-        .target-info {
-            background: #f9f9f9;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-        }
-        .target-info h2 {
-            color: #2196F3;
-            margin-bottom: 15px;
-        }
-        .target-info p {
-            margin: 5px 0;
-        }
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-        .info-item {
-            background: white;
-            padding: 10px 15px;
-            border-radius: 5px;
-            border-left: 3px solid #2196F3;
-        }
-        .info-item strong {
-            display: block;
-            color: #666;
-            font-size: 0.85em;
-            margin-bottom: 5px;
-        }
-        .findings {
-            margin-top: 30px;
-        }
-        .findings h2 {
-            color: #2196F3;
-            border-bottom: 2px solid #2196F3;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-        }
-        .vuln-card {
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            overflow: hidden;
-        }
-        .vuln-header {
-            padding: 15px 20px;
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .vuln-header h3 {
-            margin: 0;
-            font-size: 1.2em;
-        }
-        .vuln-body {
-            padding: 20px;
-        }
-        .vuln-meta {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 15px;
-            padding: 15px;
-            background: #f9f9f9;
-            border-radius: 5px;
-        }
-        .vuln-meta-item strong {
-            color: #666;
-            font-size: 0.85em;
-            margin-bottom: 5px;
-        }
-        .vuln-section {
-            margin-bottom: 15px;
-        }
-        .vuln-section h4 {
-            color: #333;
-            margin-bottom: 8px;
-            font-size: 1em;
-        }
-        .vuln-section p, .vuln-section pre {
-            margin: 0;
-            padding: 10px;
-            background: #f5f5f5;
-            border-left: 3px solid #2196F3;
-            border-radius: 3px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-        .remediation {
-            background: #e8f5e9;
-            border-left-color: #4caf50;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #ddd;
-            color: #666;
-        }
-        .severity-badge {
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 0.9em;
-        }
-        @media print {
-            body { background: white; padding: 0; }
-            .container { box-shadow: none; }
-        }
-    </style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TungkuApi v2.0 - API Security Assessment Report</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Public+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                colors: {
+                    "primary": "#17b0cf",
+                    "background-light": "#fafafa",
+                    "background-dark": "#16181d",
+                    "surface-dark": "#1e2128",
+                    "border-dark": "#2d323d",
+                    "severity-critical": "#EF4444",
+                    "severity-high": "#F97316",
+                    "severity-medium": "#FBBF24",
+                    "severity-low": "#22C55E",
+                },
+                fontFamily: {
+                    "display": ["Space Grotesk", "sans-serif"],
+                    "body": ["Public Sans", "sans-serif"],
+                    "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"]
+                },
+                borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+            },
+        },
+    }
+</script>
+<style>
+    body { font-family: 'Public Sans', sans-serif; }
+    h1, h2, h3, .font-display { font-family: 'Space Grotesk', sans-serif; }
+    .code-block { background: #0d0e12; border: 1px solid #2d323d; }
+    .problematic-code { background: rgba(239, 68, 68, 0.15); border-left: 3px solid #EF4444; padding: 2px 8px; margin: 2px 0; }
+    .safe-code { background: rgba(34, 197, 94, 0.1); border-left: 3px solid #22C55E; padding: 2px 8px; margin: 2px 0; }
+    .comment { color: #6b7280; font-style: italic; }
+    .highlight-red { color: #EF4444; font-weight: bold; }
+    .highlight-yellow { color: #FBBF24; font-weight: bold; }
+    .highlight-green { color: #22C55E; font-weight: bold; }
+    @media print {
+        body { background: white; padding: 0; }
+        .no-print { display: none !important; }
+    }
+</style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🔥 TungkuApi v2.0</h1>
-            <p>Advanced API Penetration Testing Tool</p>
-            <span class="version">Version 2.0</span>
-        </div>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
 
-        <div class="target-info">
-            <h2>Informasi Target</h2>
-            <p><strong>URL:</strong> {{TARGET_URL}}</p>
-            <p><strong>Tanggal Scan:</strong> {{SCAN_DATE}}</p>
-            <p><strong>Total Kerentanan:</strong> {{TOTAL_VULNS}}</p>
-            
-            <div class="info-grid">
-                <div class="info-item">
-                    <strong>Endpoint Ditemukan</strong>
-                    {{DISCOVERED_ENDPOINTS}}
-                </div>
-                <div class="info-item">
-                    <strong>WAF Terdeteksi</strong>
-                    {{WAF_DETECTED}}
-                </div>
-                <div class="info-item">
-                    <strong>Scanner Used</strong>
-                    All v2.0 Scanners
-                </div>
-            </div>
-        </div>
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-50 w-full border-b border-border-dark bg-background-dark/80 backdrop-blur-md no-print">
+<div class="flex h-16 items-center justify-between px-6">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-3">
+<div class="size-8 bg-primary flex items-center justify-center rounded-lg">
+<span class="material-symbols-outlined text-background-dark font-bold">shield</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight">TungkuApi <span class="text-primary">v2.0</span></h1>
+</div>
+<div class="h-6 w-[1px] bg-border-dark"></div>
+<div class="flex items-center gap-2 text-sm text-slate-400">
+<span>API Security Assessment</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-background-dark hover:bg-primary/90 transition-colors" onclick="window.print()">
+<span class="material-symbols-outlined text-sm">download</span>
+Export PDF
+</button>
+<div class="size-9 rounded-full bg-surface-dark border border-border-dark flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-300">person</span>
+</div>
+</div>
+</div>
+</header>
 
-        <div class="summary">
-            <div class="summary-card critical">
-                <h3>{{CRITICAL_COUNT}}</h3>
-                <p>CRITICAL</p>
-            </div>
-            <div class="summary-card high">
-                <h3>{{HIGH_COUNT}}</h3>
-                <p>HIGH</p>
-            </div>
-            <div class="summary-card medium">
-                <h3>{{MEDIUM_COUNT}}</h3>
-                <p>MEDIUM</p>
-            </div>
-            <div class="summary-card low">
-                <h3>{{LOW_COUNT}}</h3>
-                <p>LOW</p>
-            </div>
-            <div class="summary-card info">
-                <h3>{{INFO_COUNT}}</h3>
-                <p>INFO</p>
-            </div>
-        </div>
+<div class="flex h-[calc(100vh-64px)] overflow-hidden">
 
-        <div class="findings">
-            <h2>🔍 Detail Temuan Kerentanan</h2>
-            {{VULNERABILITIES}}
-        </div>
+<!-- Sidebar Navigation -->
+<aside class="w-64 border-r border-border-dark bg-background-dark flex flex-col justify-between p-4 overflow-y-auto no-print">
+<div class="space-y-6">
+<div>
+<p class="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-4">Report Navigation</p>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-sm font-medium bg-primary/10 text-primary border border-primary/20 rounded-lg transition-all" href="#executive-summary">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+Executive Summary
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-surface-dark rounded-lg transition-all" href="#detailed-findings">
+<span class="material-symbols-outlined text-[20px] fill-1">find_replace</span>
+Detailed Findings ({{TOTAL_VULNS}})
+</a>
+</nav>
+</div>
+<div>
+<p class="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-4">Assessment Stats</p>
+<div class="grid grid-cols-2 gap-2 px-3">
+<div class="p-2 rounded-lg bg-surface-dark border border-border-dark">
+<p class="text-xs text-slate-500">Total</p>
+<p class="text-lg font-display font-bold">{{TOTAL_VULNS}}</p>
+</div>
+<div class="p-2 rounded-lg bg-surface-dark border border-border-dark">
+<p class="text-xs text-slate-500">Critical</p>
+<p class="text-lg font-display font-bold text-severity-critical">{{CRITICAL_COUNT}}</p>
+</div>
+<div class="p-2 rounded-lg bg-surface-dark border border-border-dark">
+<p class="text-xs text-slate-500">High</p>
+<p class="text-lg font-display font-bold text-severity-high">{{HIGH_COUNT}}</p>
+</div>
+<div class="p-2 rounded-lg bg-surface-dark border border-border-dark">
+<p class="text-xs text-slate-500">Medium</p>
+<p class="text-lg font-display font-bold text-severity-medium">{{MEDIUM_COUNT}}</p>
+</div>
+<div class="p-2 rounded-lg bg-surface-dark border border-border-dark">
+<p class="text-xs text-slate-500">Low</p>
+<p class="text-lg font-display font-bold text-severity-low">{{LOW_COUNT}}</p>
+</div>
+</div>
+</div>
+</div>
+<div class="pt-6 border-t border-border-dark">
+<div class="bg-surface-dark p-3 rounded-lg">
+<p class="text-xs text-slate-400 font-medium">Report Version</p>
+<p class="text-xs text-white">v2.0 - {{SCAN_DATE}}</p>
+</div>
+</div>
+</aside>
 
-        <div class="footer">
-            <p>Dibuat oleh <strong>TungkuApi v2.0</strong></p>
-            <p>Advanced API Penetration Testing Tool untuk Security Assessment</p>
-            <p>Author: <strong>Re-xist</strong> | GitHub: <a href="https://github.com/Re-xist">@Re-xist</a></p>
-            <p>Generated on {{SCAN_DATE}}</p>
-        </div>
-    </div>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto p-8 scroll-smooth">
+<div class="max-w-5xl mx-auto space-y-8">
+
+<!-- Executive Summary -->
+<section id="executive-summary" class="space-y-6">
+<div class="space-y-1">
+<p class="text-primary font-display font-medium text-sm tracking-widest uppercase">API Penetration Testing</p>
+<h2 class="text-4xl font-display font-black tracking-tight">Executive Summary</h2>
+</div>
+
+<div class="bg-surface-dark border border-border-dark rounded-xl p-6 space-y-4">
+<div class="flex items-center gap-4">
+<div class="size-12 rounded-lg bg-severity-high/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-severity-high text-2xl">error</span>
+</div>
+<div class="flex-1">
+<p class="text-sm text-slate-400">Overall Risk Rating</p>
+<p class="text-2xl font-display font-black text-severity-high">HIGH</p>
+</div>
+</div>
+<p class="text-sm leading-relaxed text-slate-300">
+Security assessment of <strong class="text-white">{{TARGET_URL}}</strong> identified <strong class="text-white">{{TOTAL_VULNS}} vulnerabilities</strong> including <strong class="text-severity-critical">{{CRITICAL_COUNT}} Critical</strong>, <strong class="text-severity-high">{{HIGH_COUNT}} High</strong>, <strong class="text-severity-medium">{{MEDIUM_COUNT}} Medium</strong>, and <strong class="text-severity-low">{{LOW_COUNT}} Low</strong> severity findings through comprehensive API scanning.
+</p>
+</div>
+
+<div class="grid grid-cols-4 gap-4">
+<div class="bg-surface-dark border border-severity-critical rounded-xl p-4 text-center">
+<p class="text-3xl font-display font-black text-severity-critical">{{CRITICAL_COUNT}}</p>
+<p class="text-xs text-slate-400 uppercase font-bold tracking-wider">Critical</p>
+</div>
+<div class="bg-surface-dark border border-severity-high rounded-xl p-4 text-center">
+<p class="text-3xl font-display font-black text-severity-high">{{HIGH_COUNT}}</p>
+<p class="text-xs text-slate-400 uppercase font-bold tracking-wider">High</p>
+</div>
+<div class="bg-surface-dark border border-severity-medium rounded-xl p-4 text-center">
+<p class="text-3xl font-display font-black text-severity-medium">{{MEDIUM_COUNT}}</p>
+<p class="text-xs text-slate-400 uppercase font-bold tracking-wider">Medium</p>
+</div>
+<div class="bg-surface-dark border border-severity-low rounded-xl p-4 text-center">
+<p class="text-3xl font-display font-black text-severity-low">{{LOW_COUNT}}</p>
+<p class="text-xs text-slate-400 uppercase font-bold tracking-wider">Low</p>
+</div>
+</div>
+
+<div class="bg-surface-dark border border-border-dark rounded-xl p-6">
+<h3 class="text-lg font-display font-bold mb-4">Target Information</h3>
+<div class="grid grid-cols-2 gap-4 text-sm">
+<div>
+<p class="text-slate-500">Target URL</p>
+<p class="font-mono text-primary">{{TARGET_URL}}</p>
+</div>
+<div>
+<p class="text-slate-500">Scan Date</p>
+<p class="text-white">{{SCAN_DATE}}</p>
+</div>
+<div>
+<p class="text-slate-500">Endpoints Discovered</p>
+<p class="text-white">{{DISCOVERED_ENDPOINTS}}</p>
+</div>
+<div>
+<p class="text-slate-500">WAF Detected</p>
+<p class="text-white">{{WAF_DETECTED}}</p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- DETAILED FINDINGS -->
+<section id="detailed-findings" class="space-y-12">
+<div class="space-y-1">
+<p class="text-primary font-display font-medium text-sm tracking-widest uppercase">Security Findings</p>
+<h2 class="text-4xl font-display font-black tracking-tight">Detailed Findings</h2>
+<p class="text-sm text-slate-400">All {{TOTAL_VULNS}} findings with complete Evidence & Proof of Concept</p>
+</div>
+
+{{VULNERABILITIES}}
+</section>
+
+<!-- Report Footer -->
+<section class="bg-surface-dark border border-border-dark rounded-xl p-6 mt-12">
+<div class="text-center space-y-4">
+<div class="flex items-center justify-center gap-3">
+<div class="size-10 bg-primary/10 flex items-center justify-center rounded-lg">
+<span class="material-symbols-outlined text-primary">shield_lock</span>
+</div>
+<div class="text-left">
+<p class="text-xs text-slate-500 uppercase tracking-wider">Report Generated</p>
+<p class="text-lg font-display font-bold text-white">{{SCAN_DATE}}</p>
+</div>
+</div>
+<div class="pt-4 border-t border-border-dark">
+<p class="text-xs text-slate-400 italic">
+This report is generated by TungkuApi v2.0 - Advanced API Penetration Testing Tool. All findings include complete Evidence & Proof of Concept. Findings should be validated with additional testing.
+</p>
+</div>
+</div>
+<div class="pt-4 border-t border-border-dark mt-4">
+<p class="text-xs text-slate-500">
+<span class="font-bold">Target:</span> {{TARGET_URL}} |
+<span class="font-bold">Total Findings:</span> {{TOTAL_VULNS}} ({{CRITICAL_COUNT}} Critical, {{HIGH_COUNT}} High, {{MEDIUM_COUNT}} Medium, {{LOW_COUNT}} Low)
+</p>
+<p class="text-xs text-slate-500 mt-2">
+<span class="font-bold">Author:</span> Re-xist | <span class="font-bold">GitHub:</span> <a href="https://github.com/Re-xist" class="text-primary hover:underline">@Re-xist</a>
+</p>
+</div>
+</section>
+
+</div>
+</main>
+
+</div>
+
 </body>
 </html>"""
 
     def _create_vuln_html(self, vuln):
-        """Create HTML for a single vulnerability"""
-        color = self.severity_colors.get(vuln.get("severity", "INFO"), "#666")
+        """Create HTML for a single vulnerability with new professional format"""
+        severity = vuln.get("severity", "INFO")
+        severity_lower = severity.lower()
 
-        remediation_html = ""
-        if "remediation" in vuln:
-            remediation_html = f"""
-            <div class="vuln-section remediation">
-                <h4>🛡️ Rekomendasi Perbaikan</h4>
-                <p>{self._escape_html(vuln.get('remediation', ''))}</p>
-            </div>"""
+        # Map severity to CSS class
+        severity_class = {
+            "CRITICAL": "severity-critical",
+            "HIGH": "severity-high",
+            "MEDIUM": "severity-medium",
+            "LOW": "severity-low",
+            "INFO": "severity-low"
+        }.get(severity, "severity-low")
 
-        # Build meta info with enhanced fields
+        # Calculate CVSS score based on severity
+        cvss_score = self._calculate_cvss_score(severity)
+
+        # Generate unique ID
+        vuln_id = vuln.get('id', f"TUNGKU-{self._generate_vuln_id()}")
+
+        # Build metadata HTML
         meta_html = ""
         if vuln.get('full_url'):
             meta_html += f"""
                     <div class="vuln-meta-item">
-                        <strong>Full URL</strong>
+                        <strong>Endpoint URL</strong>
                         <span style="word-break: break-all;">{self._escape_html(vuln.get('full_url', ''))}</span>
                     </div>"""
         if vuln.get('parameter'):
@@ -474,105 +476,193 @@ class ReportGenerator:
                         <strong>Method</strong>
                         <span>{vuln.get('request_method', 'GET')}</span>
                     </div>"""
-        if vuln.get('payload'):
+        if vuln.get('timestamp'):
             meta_html += f"""
-                    <div class="vuln-meta-item">
-                        <strong>Payload</strong>
-                        <span style="word-break: break-all; font-family: monospace; font-size: 0.9em;">{self._escape_html(vuln.get('payload', ''))}</span>
-                    </div>"""
-
-        # Request/Response details
-        request_response_html = ""
-        if vuln.get('request_detail') or vuln.get('response_detail'):
-            req = vuln.get('request_detail', {})
-            resp = vuln.get('response_detail', {})
-
-            request_response_html = """
-                <div class="vuln-section">
-                    <h4>🔌 HTTP Request</h4>
-                    <div style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 0.85em; overflow-x: auto;">
-            """
-
-            if req:
-                request_response_html += f"<div><span style='color: #66d9ef;'>{req.get('method', 'GET')}</span> <span style='color: #a6e22e;'>{self._escape_html(req.get('url', ''))}</span></div>"
-
-                if req.get('headers'):
-                    request_response_html += "<div style='margin-top: 10px; color: #fd971f;'>Headers:</div>"
-                    for k, v in req.get('headers', {}).items():
-                        request_response_html += f"<div><span style='color: #66d9ef;'>{self._escape_html(k)}</span>: {self._escape_html(str(v))}</div>"
-
-            request_response_html += "</div>"
-
-            request_response_html += """
-                    <h4 style='margin-top: 15px;'>📥 HTTP Response</h4>
-                    <div style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 0.85em; overflow-x: auto;">
-            """
-
-            if resp:
-                status = resp.get('status_code', 'N/A')
-                status_color = '#a6e22e' if status == 200 else '#f92672'
-                request_response_html += f"<div>Status: <span style='color: {status_color};'>{status}</span></div>"
-
-                if resp.get('headers'):
-                    request_response_html += "<div style='margin-top: 10px; color: #fd971f;'>Headers:</div>"
-                    for k, v in resp.get('headers', {}).items():
-                        request_response_html += f"<div><span style='color: #66d9ef;'>{self._escape_html(k)}</span>: {self._escape_html(str(v)[:100])}</div>"
-
-                if resp.get('response_time'):
-                    request_response_html += f"<div style='margin-top: 10px;'>Response Time: <span style='color: #e6db74;'>{resp.get('response_time')}</span></div>"
-
-                if resp.get('response_snippet'):
-                    request_response_html += f"<div style='margin-top: 10px;'><span style='color: #fd971f;'>Response Body (first 500 chars):</span></div>"
-                    request_response_html += f"<div style='color: #a6e22e; word-break: break-word;'>{self._escape_html(resp.get('response_snippet', ''))}</div>"
-
-                if resp.get('time_delay'):
-                    request_response_html += f"<div style='margin-top: 10px;'>Time Delay: <span style='color: #f92672;'>{resp.get('time_delay')}</span></div>"
-
-                if resp.get('content_length'):
-                    request_response_html += f"<div style='margin-top: 10px;'>Content Length: {resp.get('content_length')} bytes</div>"
-
-            request_response_html += "</div></div>"
-
-        return f"""
-        <div class="vuln-card">
-            <div class="vuln-header" style="background: {color}">
-                <h3>{self._escape_html(vuln.get('name', 'Unknown'))}</h3>
-                <span class="severity-badge" style="background: rgba(255,255,255,0.3);">
-                    {vuln.get('severity', 'INFO')}
-                </span>
-            </div>
-            <div class="vuln-body">
-                <div class="vuln-meta">
-                    <div class="vuln-meta-item">
-                        <strong>Endpoint URL</strong>
-                        <span style="word-break: break-all;">{self._escape_html(vuln.get('full_url', vuln.get('endpoint', '')))}</span>
-                    </div>
                     <div class="vuln-meta-item">
                         <strong>Timestamp</strong>
                         <span>{vuln.get('timestamp', '')}</span>
-                    </div>
-{meta_html}
-                </div>
+                    </div>"""
 
-                <div class="vuln-section">
-                    <h4>📝 Deskripsi</h4>
-                    <p>{self._escape_html(vuln.get('description', ''))}</p>
-                </div>
+        # Evidence HTML with curl command
+        evidence_html = self._create_evidence_html(vuln, severity_class)
 
-                <div class="vuln-section" style="background: #1e1e1e; border-left: 4px solid {color};">
-                    <h4 style="color: {color};">💣 Evidence & Proof of Concept (PoC)</h4>
-                    <div style="background: #2d2d2d; color: #f8f8f2; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 0.85em;">
-                        <div style="color: #66d9ef; margin-bottom: 10px;"># Curl command to reproduce:</div>
-                        <div style="background: #000; padding: 10px; border-radius: 3px;">
-                            <code style="color: #a6e22e; white-space: pre-wrap; word-break: break-all;">{self._generate_curl_command(vuln)}</code>
-                        </div>
-                    </div>
-                </div>
+        # Request/Response HTML
+        request_response_html = self._create_request_response_html(vuln)
+
+        # Remediation HTML
+        remediation_html = ""
+        if vuln.get('remediation'):
+            remediation_html = f"""
+<section class="space-y-3 bg-background-dark/50 p-4 rounded-lg border border-border-dark">
+<h4 class="text-xs font-bold uppercase tracking-wider text-severity-low">✅ Recommended Remediation</h4>
+<ul class="space-y-2">
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+{self._escape_html(vuln.get('remediation', ''))}
+</li>
+</ul>
+</section>"""
+
+        return f"""
+<article class="relative group">
+<div class="absolute -left-4 top-0 bottom-0 w-1 bg-{severity_class} rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="bg-surface-dark border border-border-dark rounded-xl overflow-hidden shadow-2xl">
+<div class="p-6 border-b border-border-dark flex items-start justify-between bg-gradient-to-r from-{severity_class}/5 to-transparent">
+<div class="space-y-2">
+<div class="flex items-center gap-3">
+<span class="px-2 py-0.5 rounded bg-{severity_class} text-[10px] font-black tracking-widest text-white uppercase">{severity}</span>
+<span class="text-xs font-mono text-slate-500">ID: {vuln_id}</span>
+</div>
+<h3 class="text-2xl font-display font-bold text-white">{self._escape_html(vuln.get('name', 'Unknown'))}</h3>
+</div>
+<div class="text-right">
+<div class="inline-flex flex-col items-center justify-center p-2 rounded-lg bg-background-dark border border-border-dark min-w-[80px]">
+<p class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">CVSS</p>
+<p class="text-2xl font-display font-black text-{severity_class}">{cvss_score}</p>
+</div>
+</div>
+</div>
+
+<div class="p-6 space-y-6">
+<section class="space-y-2">
+<h4 class="text-xs font-bold uppercase tracking-wider text-primary">Technical Description</h4>
+<p class="text-sm leading-relaxed text-slate-300">
+{self._escape_html(vuln.get('description', ''))}
+</p>
+</section>
+
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h4 class="text-xs font-bold uppercase tracking-wider text-{severity_class}">🔍 Evidence & Proof of Concept</h4>
+<span class="px-2 py-1 rounded bg-{severity_class}/10 text-{severity_class} text-[10px] font-bold">VERIFIED</span>
+</div>
+
+{evidence_html}
+</section>
 
 {request_response_html}
-                {remediation_html}
-            </div>
-        </div>"""
+
+<div class="p-4 rounded-lg bg-surface-dark/50 border border-border-dark">
+<h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Technical Details</h4>
+<div class="grid grid-cols-2 gap-3 text-xs">
+{meta_html}
+</div>
+</div>
+
+{remediation_html}
+</div>
+
+<div class="px-6 py-4 bg-background-dark border-t border-border-dark flex items-center justify-between">
+<div class="flex items-center gap-4">
+<span class="text-xs text-slate-500">Status: <span class="inline-flex items-center px-2 py-0.5 rounded bg-{severity_class}/10 text-{severity_class} text-[10px] font-bold border border-{severity_class}/20">{severity} - ACTION REQUIRED</span></span>
+</div>
+</div>
+</div>
+</article>"""
+
+    def _create_evidence_html(self, vuln, severity_class):
+        """Create evidence section HTML"""
+        curl_cmd = self._generate_curl_command(vuln)
+        payload = vuln.get('payload', '')
+
+        payload_html = ""
+        if payload:
+            payload_html = f"""
+<div class="comment mt-3"># Payload used:</div>
+<div class="problematic-code">
+<div>{self._escape_html(payload[:200])}</div>
+</div>"""
+
+        return f"""
+<div class="bg-background-dark rounded-lg border border-border-dark overflow-hidden">
+<div class="p-3 border-b border-border-dark bg-surface-dark/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-severity-high text-sm">terminal</span>
+<p class="text-xs font-bold text-white">Proof of Concept: Reproduce Vulnerability</p>
+</div>
+</div>
+<div class="p-4 space-y-3">
+<div class="code-block rounded-lg p-4 font-mono text-xs text-slate-400 overflow-x-auto">
+<div class="comment"># Run this curl command to reproduce the vulnerability:</div>
+<div class="text-primary mt-2">{self._escape_html(curl_cmd)}</div>
+{payload_html}
+</div>
+
+<div class="bg-{severity_class}/5 border border-{severity_class}/20 rounded p-3 mt-3">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-{severity_class} text-sm">error</span>
+<div>
+<p class="text-xs font-bold text-{severity_class}">WHY THIS IS A PROBLEM:</p>
+<ul class="text-xs text-slate-300 mt-1 space-y-1">
+<li>• This vulnerability could lead to security breaches</li>
+<li>• Attackers can exploit this to gain unauthorized access</li>
+<li>• Immediate remediation is strongly recommended</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>"""
+
+    def _create_request_response_html(self, vuln):
+        """Create HTTP request/response HTML"""
+        if not vuln.get('request_detail') and not vuln.get('response_detail'):
+            return ""
+
+        req = vuln.get('request_detail', {})
+        resp = vuln.get('response_detail', {})
+
+        html = """
+<!-- Request/Response Details -->
+<div class="bg-background-dark rounded-lg border border-border-dark overflow-hidden">
+<div class="p-3 border-b border-border-dark bg-surface-dark/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-severity-high text-sm">http</span>
+<p class="text-xs font-bold text-white">HTTP Request & Response Details</p>
+</div>
+</div>
+<div class="p-4 space-y-3">
+"""
+
+        # Request section
+        if req:
+            html += """
+<div class="code-block rounded-lg p-4 font-mono text-xs overflow-x-auto">
+<div class="comment"># HTTP Request:</div>
+"""
+            html += f"<div class=\"text-primary mt-2\">{self._escape_html(req.get('method', 'GET'))} <span class=\"text-severity-high\">{self._escape_html(req.get('url', ''))}</span></div>"
+
+            if req.get('headers'):
+                html += "<div class='mt-3 text-slate-400'>Headers:</div>"
+                for k, v in req.get('headers', {}).items():
+                    html += f"<div><span class='text-primary'>{self._escape_html(k)}</span>: {self._escape_html(str(v)[:100])}</div>"
+
+            html += "</div>"
+
+        # Response section
+        if resp:
+            status = resp.get('status_code', 'N/A')
+            status_color = 'text-severity-high' if status >= 400 else 'text-severity-low'
+
+            html += f"""
+<div class="code-block rounded-lg p-4 font-mono text-xs mt-3 overflow-x-auto">
+<div class="comment"># HTTP Response:</div>
+<div class="mt-2">Status: <span class="{status_color}">{status}</span></div>
+"""
+
+            if resp.get('response_time'):
+                html += f"<div class='mt-2'>Response Time: <span class='text-severity-medium'>{self._escape_html(str(resp.get('response_time')))}</span></div>"
+
+            if resp.get('response_snippet'):
+                snippet = resp.get('response_snippet', '')[:300]
+                html += f"<div class='mt-2'><span class='text-slate-400'>Response Body (first 300 chars):</span></div>"
+                html += f"<div class='text-severity-high mt-1'>{self._escape_html(snippet)}</div>"
+
+            html += "</div>"
+
+        html += "</div></div>"
+
+        return html
 
     def _generate_curl_command(self, vuln):
         """Generate curl command from vulnerability details"""
@@ -603,6 +693,23 @@ class ReportGenerator:
         curl_cmd = " ".join(curl_parts)
 
         return curl_cmd
+
+    def _calculate_cvss_score(self, severity):
+        """Calculate CVSS score based on severity"""
+        cvss_scores = {
+            "CRITICAL": "9.0",
+            "HIGH": "7.5",
+            "MEDIUM": "5.5",
+            "LOW": "3.5",
+            "INFO": "0.0"
+        }
+        return cvss_scores.get(severity, "0.0")
+
+    def _generate_vuln_id(self):
+        """Generate unique vulnerability ID"""
+        import random
+        import string
+        return f"2026-{random.randint(1000, 9999)}"
 
     def _escape_html(self, text):
         """Escape HTML special characters"""

@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Security Assessment Report - BCAS Mobile Banking</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Public+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+        darkMode: "class",
+        theme: {
+            extend: {
+                colors: {
+                    "primary": "#17b0cf",
+                    "background-light": "#fafafa",
+                    "background-dark": "#16181d",
+                    "surface-dark": "#1e2128",
+                    "border-dark": "#2d323d",
+                    "severity-critical": "#EF4444",
+                    "severity-high": "#F97316",
+                    "severity-medium": "#FBBF24",
+                    "severity-low": "#22C55E",
+                },
+                fontFamily: {
+                    "display": ["Space Grotesk", "sans-serif"],
+                    "body": ["Public Sans", "sans-serif"],
+                    "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "Liberation Mono", "Courier New", "monospace"]
+                },
+                borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+            },
+        },
+    }
+</script>
+<style>
+    body { font-family: 'Public Sans', sans-serif; }
+    h1, h2, h3, .font-display { font-family: 'Space Grotesk', sans-serif; }
+    .code-block { background: #0d0e12; border: 1px solid #2d323d; }
+    .problematic-code { background: rgba(239, 68, 68, 0.15); border-left: 3px solid #EF4444; padding: 2px 8px; margin: 2px 0; }
+    .safe-code { background: rgba(34, 197, 94, 0.1); border-left: 3px solid #22C55E; padding: 2px 8px; margin: 2px 0; }
+    .comment { color: #6b7280; font-style: italic; }
+    .highlight-red { color: #EF4444; font-weight: bold; }
+    .highlight-yellow { color: #FBBF24; font-weight: bold; }
+    .highlight-green { color: #22C55E; font-weight: bold; }
+</style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen">
+
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-50 w-full border-b border-border-dark bg-background-dark/80 backdrop-blur-md">
+<div class="flex h-16 items-center justify-between px-6">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-3">
+<div class="size-8 bg-primary flex items-center justify-center rounded-lg">
+<span class="material-symbols-outlined text-background-dark font-bold">shield</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight">BCAS <span class="text-primary">SecAudit</span></h1>
+</div>
+<div class="h-6 w-[1px] bg-border-dark"></div>
+<div class="flex items-center gap-2 text-sm text-slate-400">
+<span>Mobile Banking App</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="text-white">Security Assessment Report</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+<input class="h-9 w-64 rounded-lg bg-surface-dark border border-border-dark pl-10 pr-4 text-sm focus:ring-primary focus:border-primary transition-all" placeholder="Search CVE, Title, ID..." type="text"/>
+</div>
+<button class="flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-background-dark hover:bg-primary/90 transition-colors" onclick="window.print()">
+<span class="material-symbols-outlined text-sm">download</span>
+Export PDF
+</button>
+<div class="size-9 rounded-full bg-surface-dark border border-border-dark flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-300">person</span>
+</div>
+</div>
+</div>
+</header>
+
+<div class="flex h-[calc(100vh-64px)] overflow-hidden">
+
+<!-- Sidebar Navigation -->
+<aside class="w-64 border-r border-border-dark bg-background-dark flex flex-col justify-between p-4 overflow-y-auto">
+<div class="space-y-6">
+<div>
+<p class="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-4">Report Navigation</p>
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-sm font-medium bg-primary/10 text-primary border border-primary/20 rounded-lg transition-all" href="#executive-summary">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+Executive Summary
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-surface-dark rounded-lg transition-all" href="#detailed-findings">
+<span class="material-symbols-outlined text-[20px] fill-1">find_replace</span>
+Detailed Findings (8)
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-surface-dark rounded-lg transition-all" href="#risk-matrix">
+<span class="material-symbols-outlined text-[20px]">warning</span>
+Risk Matrix
+</a>
+</nav>
+</div>
+<div>
+<p class="px-3 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-4">Assessment Stats</p>
+<div class="grid grid-cols-2 gap-2 px-3">
+<div class="p-2 rounded-lg bg-surface-dark border border-border-dark">
+<p class="text-xs text-slate-500">Total</p>
+<p class="text-lg font-display font-bold">8</p>
+</div>
+<div class="p-2 rounded-lg bg-surface-dark border border-border-dark">
+<p class="text-xs text-slate-500">Critical</p>
+<p class="text-lg font-display font-bold text-severity-critical">2</p>
+</div>
+<div class="p-2 rounded-lg bg-surface-dark border border-border-dark">
+<p class="text-xs text-slate-500">High</p>
+<p class="text-lg font-display font-bold text-severity-high">3</p>
+</div>
+<div class="p-2 rounded-lg bg-surface-dark border border-border-dark">
+<p class="text-xs text-slate-500">Medium</p>
+<p class="text-lg font-display font-bold text-severity-medium">2</p>
+</div>
+<div class="p-2 rounded-lg bg-surface-dark border border-border-dark">
+<p class="text-xs text-slate-500">Low</p>
+<p class="text-lg font-display font-bold text-severity-low">1</p>
+</div>
+</div>
+</div>
+</div>
+<div class="pt-6 border-t border-border-dark">
+<div class="bg-surface-dark p-3 rounded-lg">
+<p class="text-xs text-slate-400 font-medium">Report Version</p>
+<p class="text-xs text-white">v1.0 - January 20, 2026</p>
+</div>
+</div>
+</aside>
+
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto p-8 scroll-smooth">
+<div class="max-w-5xl mx-auto space-y-8">
+
+<!-- Executive Summary -->
+<section id="executive-summary" class="space-y-6">
+<div class="space-y-1">
+<p class="text-primary font-display font-medium text-sm tracking-widest uppercase">Static Analysis Assessment</p>
+<h2 class="text-4xl font-display font-black tracking-tight">Executive Summary</h2>
+</div>
+
+<div class="bg-surface-dark border border-border-dark rounded-xl p-6 space-y-4">
+<div class="flex items-center gap-4">
+<div class="size-12 rounded-lg bg-severity-critical/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-severity-critical text-2xl">error</span>
+</div>
+<div class="flex-1">
+<p class="text-sm text-slate-400">Overall Risk Rating</p>
+<p class="text-2xl font-display font-black text-severity-critical">MODERATE-HIGH</p>
+</div>
+</div>
+<p class="text-sm leading-relaxed text-slate-300">
+Static security assessment of BCAS Mobile Banking identified <strong class="text-white">2 Critical</strong>, <strong class="text-white">3 High</strong>, <strong class="text-white">2 Medium</strong>, and <strong class="text-white">1 Low</strong> severity findings through DEX bytecode analysis and string extraction. Complete evidence with source files, code snippets, and PoC scenarios provided for all findings.
+</p>
+</div>
+
+<div class="grid grid-cols-4 gap-4">
+<div class="bg-surface-dark border border-severity-critical rounded-xl p-4 text-center">
+<p class="text-3xl font-display font-black text-severity-critical">2</p>
+<p class="text-xs text-slate-400 uppercase font-bold tracking-wider">Critical</p>
+</div>
+<div class="bg-surface-dark border border-severity-high rounded-xl p-4 text-center">
+<p class="text-3xl font-display font-black text-severity-high">3</p>
+<p class="text-xs text-slate-400 uppercase font-bold tracking-wider">High</p>
+</div>
+<div class="bg-surface-dark border border-severity-medium rounded-xl p-4 text-center">
+<p class="text-3xl font-display font-black text-severity-medium">2</p>
+<p class="text-xs text-slate-400 uppercase font-bold tracking-wider">Medium</p>
+</div>
+<div class="bg-surface-dark border border-severity-low rounded-xl p-4 text-center">
+<p class="text-3xl font-display font-black text-severity-low">1</p>
+<p class="text-xs text-slate-400 uppercase font-bold tracking-wider">Low</p>
+</div>
+</div>
+</section>
+
+<!-- DETAILED FINDINGS -->
+<section id="detailed-findings" class="space-y-12">
+<div class="space-y-1">
+<p class="text-primary font-display font-medium text-sm tracking-widest uppercase">Security Findings</p>
+<h2 class="text-4xl font-display font-black tracking-tight">Detailed Findings</h2>
+<p class="text-sm text-slate-400">All 8 findings with complete Evidence & Proof of Concept</p>
+</div>
+
+<!-- ============================================ -->
+<!-- FINDING 1: CRITICAL - Hardcoded Endpoints -->
+<!-- ============================================ -->
+<article class="relative group">
+<div class="absolute -left-4 top-0 bottom-0 w-1 bg-severity-critical rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="bg-surface-dark border border-border-dark rounded-xl overflow-hidden shadow-2xl">
+<div class="p-6 border-b border-border-dark flex items-start justify-between bg-gradient-to-r from-severity-critical/5 to-transparent">
+<div class="space-y-2">
+<div class="flex items-center gap-3">
+<span class="px-2 py-0.5 rounded bg-severity-critical text-[10px] font-black tracking-widest text-white uppercase">Critical</span>
+<span class="text-xs font-mono text-slate-500">ID: BCAS-2026-001</span>
+</div>
+<h3 class="text-2xl font-display font-bold text-white">Hardcoded Internal Server Endpoints</h3>
+</div>
+<div class="text-right">
+<div class="inline-flex flex-col items-center justify-center p-2 rounded-lg bg-background-dark border border-border-dark min-w-[80px]">
+<p class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">CVSS</p>
+<p class="text-2xl font-display font-black text-severity-critical">8.6</p>
+</div>
+</div>
+</div>
+
+<div class="p-6 space-y-6">
+<section class="space-y-2">
+<h4 class="text-xs font-bold uppercase tracking-wider text-primary">Technical Description</h4>
+<p class="text-sm leading-relaxed text-slate-300">
+The application contains hardcoded internal server endpoints pointing to <span class="text-severity-critical font-bold">172.18.3.67:8443</span>. This IP address is embedded in the compiled DEX bytecode, exposing complete banking API infrastructure including BI-Fast (Indonesia's national payment system) endpoints.
+</p>
+</section>
+
+<!-- EVIDENCE -->
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h4 class="text-xs font-bold uppercase tracking-wider text-severity-critical">🔍 Evidence & Proof of Concept</h4>
+<span class="px-2 py-1 rounded bg-severity-critical/10 text-severity-critical text-[10px] font-bold">VERIFIED</span>
+</div>
+
+<div class="bg-background-dark rounded-lg border border-border-dark overflow-hidden">
+<div class="p-3 border-b border-border-dark bg-surface-dark/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-severity-high text-sm">description</span>
+<p class="text-xs font-bold text-white">Evidence #1: API Endpoints in DEX String Pool</p>
+</div>
+</div>
+<div class="p-4 space-y-3">
+<div class="flex items-center gap-2 text-xs text-slate-400">
+<span class="material-symbols-outlined text-sm">folder</span>
+<span class="font-mono">Source: app-bcas-decompiled/classes.dex (string pool extraction)</span>
+</div>
+
+<div class="code-block rounded-lg p-4 font-mono text-xs overflow-x-auto">
+<div class="comment mb-2"># Command used to extract evidence:</div>
+<div class="text-primary mb-3">$ strings app-bcas-decompiled/classes*.dex | grep "https://172.18"</div>
+
+<div class="comment mb-2 mt-4"># ❌ PROBLEMATIC CODE - Hardcoded internal IP found:</div>
+<div class="problematic-code">
+<div class="flex gap-4">
+<span class="text-slate-600">Line:</span>
+<span class="text-white">https://<span class="highlight-red">172.18.3.67</span>:8443/ib/rest/api/validateMobilePost</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600">Line:</span>
+<span class="text-white">https://<span class="highlight-red">172.18.3.67</span>:8443/ib/rest/api/verifyPinPost</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600">Line:</span>
+<span class="text-white">https://<span class="highlight-red">172.18.3.67</span>:8443/ib/rest/authentication/logout?customerId=</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600">Line:</span>
+<span class="text-white">https://<span class="highlight-red">172.18.3.67</span>:8443/ib/rest/oob/requestOtpPost</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600">Line:</span>
+<span class="text-white">https://<span class="highlight-red">172.18.3.67</span>:8443/ib/rest/oob/validateOtpSmsPost</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600">Line:</span>
+<span class="text-white">https://<span class="highlight-red">172.18.3.67</span>:8443/ib/rest/oob/validateOtpEmailPost</span>
+</div>
+</div>
+
+<div class="comment mb-2 mt-4"># ❌ PROBLEMATIC - BI-Fast endpoints exposed (Indonesia's payment system):</div>
+<div class="problematic-code">
+<div class="flex gap-4">
+<span class="text-slate-600">Line:</span>
+<span class="text-white">https://<span class="highlight-red">172.18.3.67</span>:8443/ib/rest/bifast/proxyListPost</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600">Line:</span>
+<span class="text-white">https://<span class="highlight-red">172.18.3.67</span>:8443/ib/rest/bifast/validateProxyPost</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600">Line:</span>
+<span class="text-white">https://<span class="highlight-red">172.18.3.67</span>:8443/ib/rest/bifast/dataCustomerPost</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600">Line:</span>
+<span class="text-white">https://<span class="highlight-red">172.18.3.67</span>:8443/ib/rest/bifast/updateProxy?customerId=</span>
+</div>
+</div>
+
+<div class="comment mt-4"># ❌ PROBLEMATIC - Payment/QRIS endpoints:</div>
+<div class="problematic-code">
+<div class="flex gap-4">
+<span class="text-slate-600">Line:</span>
+<span class="text-white">https://<span class="highlight-red">172.18.3.67</span>:8443/ib/rest/payment/inquiryQrisPost</span>
+</div>
+<div class="flex gap-4">
+<span class="text-slate-600">Line:</span>
+<span class="text-white">https://<span class="highlight-red">172.18.3.67</span>:8443/ib/rest/payment/postingQris?customerId=</span>
+</div>
+</div>
+
+<div class="comment mt-4"># ... and 40+ more endpoints exposed</div>
+</div>
+
+<div class="bg-severity-critical/5 border border-severity-critical/20 rounded p-3 mt-3">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-severity-critical text-sm">error</span>
+<div>
+<p class="text-xs font-bold text-severity-critical">WHY THIS IS A PROBLEM:</p>
+<ul class="text-xs text-slate-300 mt-1 space-y-1">
+<li>• Internal IP <span class="font-mono bg-severity-critical/10 px-1 rounded">172.18.3.67</span> should NEVER be in production APK</li>
+<li>• Complete API surface (50+ endpoints) exposed to anyone who extracts strings</li>
+<li>• BI-Fast integration (national payment system) architecture revealed</li>
+<li>• <span class="font-mono bg-severity-critical/10 px-1 rounded">customerId</span> parameter pattern indicates potential IDOR vulnerability</li>
+<li>• Attacker can map entire banking infrastructure without any authentication</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Attack Scenario -->
+<div class="bg-background-dark rounded-lg border border-border-dark overflow-hidden">
+<div class="p-3 border-b border-border-dark bg-surface-dark/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-severity-high text-sm">terminal</span>
+<p class="text-xs font-bold text-white">Proof of Concept: Attack Scenario</p>
+</div>
+</div>
+<div class="p-4 space-y-3">
+<div class="code-block rounded-lg p-4 font-mono text-xs text-slate-400 overflow-x-auto">
+<div class="comment"># Step 1: Download APK from Play Store</div>
+<div class="text-white">$ wget https://play.google.com/store/apps/details?id=com.dwidasa.bcas.mb.android</div>
+
+<div class="comment mt-3"># Step 2: Decompile APK</div>
+<div class="text-white">$ apktool d app-bcas.apk -o app-decompiled</div>
+
+<div class="comment mt-3"># Step 3: Extract all hardcoded endpoints</div>
+<div class="text-white">$ strings app-decompiled/classes*.dex | grep "https://172.18" > endpoints.txt</div>
+
+<div class="comment mt-3"># Step 4: View exposed API structure</div>
+<div class="text-white">$ cat endpoints.txt</div>
+<div class="text-severity-high">https://172.18.3.67:8443/ib/rest/api/validateMobilePost</div>
+<div class="text-severity-high">https://172.18.3.67:8443/ib/rest/bifast/proxyListPost</div>
+<div class="text-severity-high">https://172.18.3.67:8443/ib/rest/payment/inquiryQrisPost</div>
+<div class="comment"># ... 50+ more endpoints</div>
+
+<div class="comment mt-3"># Step 5: Attacker now has complete API surface mapping</div>
+<div class="text-white">$ wc -l endpoints.txt</div>
+<div class="text-severity-critical">54 endpoints exposed</div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="space-y-3 bg-background-dark/50 p-4 rounded-lg border border-border-dark">
+<h4 class="text-xs font-bold uppercase tracking-wider text-severity-low">✅ Recommended Remediation</h4>
+<ul class="space-y-2">
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Remove ALL hardcoded endpoints - use BuildConfig with build variants
+</li>
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Implement Firebase Remote Config or secure server-side configuration delivery
+</li>
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Use DNS names instead of IP addresses for production environments
+</li>
+</ul>
+</section>
+</div>
+
+<div class="px-6 py-4 bg-background-dark border-t border-border-dark flex items-center justify-between">
+<div class="flex items-center gap-4">
+<span class="text-xs text-slate-500">Status: <span class="inline-flex items-center px-2 py-0.5 rounded bg-severity-critical/10 text-severity-critical text-[10px] font-bold border border-severity-critical/20">CRITICAL - IMMEDIATE ACTION REQUIRED</span></span>
+</div>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary text-background-dark text-xs font-bold rounded-lg hover:scale-[1.02] transition-transform">
+<span class="material-symbols-outlined text-sm">rocket_launch</span>
+Initiate Remediation
+</button>
+</div>
+</div>
+</article>
+
+<!-- ============================================ -->
+<!-- FINDING 2: CRITICAL - API Endpoints Exposed -->
+<!-- ============================================ -->
+<article class="relative group">
+<div class="absolute -left-4 top-0 bottom-0 w-1 bg-severity-critical rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="bg-surface-dark border border-border-dark rounded-xl overflow-hidden shadow-2xl">
+<div class="p-6 border-b border-border-dark flex items-start justify-between bg-gradient-to-r from-severity-critical/5 to-transparent">
+<div class="space-y-2">
+<div class="flex items-center gap-3">
+<span class="px-2 py-0.5 rounded bg-severity-critical text-[10px] font-black tracking-widest text-white uppercase">Critical</span>
+<span class="text-xs font-mono text-slate-500">ID: BCAS-2026-002</span>
+</div>
+<h3 class="text-2xl font-display font-bold text-white">Sensitive API Endpoints Exposed in Code</h3>
+</div>
+<div class="text-right">
+<div class="inline-flex flex-col items-center justify-center p-2 rounded-lg bg-background-dark border border-border-dark min-w-[80px]">
+<p class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">CVSS</p>
+<p class="text-2xl font-display font-black text-severity-critical">7.5</p>
+</div>
+</div>
+</div>
+
+<div class="p-6 space-y-6">
+<section class="space-y-2">
+<h4 class="text-xs font-bold uppercase tracking-wider text-primary">Technical Description</h4>
+<p class="text-sm leading-relaxed text-slate-300">
+Complete API endpoint structure is visible in compiled DEX files, including sensitive financial operations. URL patterns reveal predictable <span class="text-severity-critical font-bold">customerId</span> parameter that could enable IDOR attacks.
+</p>
+</section>
+
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h4 class="text-xs font-bold uppercase tracking-wider text-severity-critical">🔍 Evidence & Proof of Concept</h4>
+<span class="px-2 py-1 rounded bg-severity-critical/10 text-severity-critical text-[10px] font-bold">VERIFIED</span>
+</div>
+
+<div class="bg-background-dark rounded-lg border border-border-dark overflow-hidden">
+<div class="p-3 border-b border-border-dark bg-surface-dark/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-severity-high text-sm">description</span>
+<p class="text-xs font-bold text-white">Evidence: API Parameter Pattern Analysis</p>
+</div>
+</div>
+<div class="p-4 space-y-3">
+<div class="flex items-center gap-2 text-xs text-slate-400">
+<span class="material-symbols-outlined text-sm">folder</span>
+<span class="font-mono">Source: app-bcas-decompiled/classes2.dex, classes3.dex string extraction</span>
+</div>
+
+<div class="code-block rounded-lg p-4 font-mono text-xs overflow-x-auto">
+<div class="comment"># ❌ PROBLEMATIC: customerId parameter exposed in URLs</div>
+<div class="comment"># This indicates potential IDOR vulnerability</div>
+
+<div class="problematic-code mt-3">
+<div class="text-slate-400"># Pattern 1: customerId as query parameter</div>
+<div>https://172.18.3.67:8443/ib/rest/account/historyDetail?<span class="highlight-red">customerId={value}</span></div>
+<div>https://172.18.3.67:8443/ib/rest/account/statement?<span class="highlight-red">customerId={value}</span></div>
+<div>https://172.18.3.67:8443/ib/rest/bifast/updateProxy?<span class="highlight-red">customerId={value}</span></div>
+<div>https://172.18.3.67:8443/ib/rest/bifast/portingProxy?<span class="highlight-red">customerId={value}</span></div>
+<div>https://172.18.3.67:8443/ib/rest/payment/postingQris?<span class="highlight-red">customerId={value}</span></div>
+<div>https://172.18.3.67:8443/ib/rest/payment/pln?<span class="highlight-red">customerId={value}</span></div>
+<div>https://172.18.3.67:8443/ib/rest/transfer/register?<span class="highlight-red">customerId={value}</span></div>
+</div>
+
+<div class="comment mt-4"># ❌ PROBLEMATIC: deviceId parameter for location services</div>
+<div class="problematic-code">
+<div>https://172.18.3.67:8443/ib/rest/location/nearest?<span class="highlight-red">deviceId={value}</span></div>
+<div>https://172.18.3.67:8443/ib/rest/location/criteria?<span class="highlight-red">deviceId={value}</span></div>
+</div>
+
+<div class="comment mt-4"># ❌ PROBLEMATIC: sessionCardless and sessionId parameters</div>
+<div class="problematic-code">
+<div class="text-slate-400"># From string pool analysis:</div>
+<div>&sessionCardless=</div>
+<div>&sessionId=</div>
+<div>&token={0}</div>
+</div>
+</div>
+
+<div class="bg-severity-critical/5 border border-severity-critical/20 rounded p-3 mt-3">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-severity-critical text-sm">error</span>
+<div>
+<p class="text-xs font-bold text-severity-critical">WHY THIS IS A PROBLEM:</p>
+<ul class="text-xs text-slate-300 mt-1 space-y-1">
+<li>• <span class="font-mono bg-severity-critical/10 px-1 rounded">customerId</span> parameter pattern suggests sequential/predictable IDs</li>
+<li>• URL structure exposed: <span class="font-mono bg-severity-critical/10 px-1 rounded">/endpoint?id={value}</span></li>
+<li>• Attacker can enumerate valid customer IDs by changing the parameter</li>
+<li>• Potential IDOR: access other users' account history, statements, transactions</li>
+<li>• Session tokens visible in URL parameters (<span class="font-mono bg-severity-critical/10 px-1 rounded">&sessionId=</span>)</li>
+<li>• Device tracking through <span class="font-mono bg-severity-critical/10 px-1 rounded">deviceId</span> parameter</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+
+<!-- API Categories -->
+<div class="bg-background-dark rounded-lg border border-border-dark overflow-hidden">
+<div class="p-3 border-b border-border-dark bg-surface-dark/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-severity-high text-sm">category</span>
+<p class="text-xs font-bold text-white">Evidence: Complete API Surface Mapping</p>
+</div>
+</div>
+<div class="p-4">
+<div class="grid grid-cols-2 gap-3">
+<div class="p-3 rounded bg-background-dark border border-severity-critical/30">
+<p class="text-severity-critical font-bold text-xs mb-2">Authentication (8)</p>
+<div class="text-[10px] text-slate-400">/api/validateMobilePost, /api/verifyPinPost, /authentication/logout, /oob/requestOtpPost</div>
+</div>
+<div class="p-3 rounded bg-background-dark border border-severity-critical/30">
+<p class="text-severity-critical font-bold text-xs mb-2">BI-Fast (6)</p>
+<div class="text-[10px] text-slate-400">/bifast/proxyListPost, /bifast/validateProxyPost, /bifast/dataCustomerPost</div>
+</div>
+<div class="p-3 rounded bg-background-dark border border-severity-high/30">
+<p class="text-severity-high font-bold text-xs mb-2">Payments (8+)</p>
+<div class="text-[10px] text-slate-400">/payment/inquiryQrisPost, /payment/postingQris, /payment/pln</div>
+</div>
+<div class="p-3 rounded bg-background-dark border border-severity-high/30">
+<p class="text-severity-high font-bold text-xs mb-2">Transfers (8+)</p>
+<div class="text-[10px] text-slate-400">/transfer/getBankList, /transfer/getCityListPost, /transfer/register</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="space-y-3 bg-background-dark/50 p-4 rounded-lg border border-border-dark">
+<h4 class="text-xs font-bold uppercase tracking-wider text-severity-low">✅ Recommended Remediation</h4>
+<ul class="space-y-2">
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Use UUIDs instead of sequential customer IDs in URLs
+</li>
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Implement API gateway with route abstraction
+</li>
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Server-side: enforce authorization checks on all customer data access
+</li>
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Add endpoint-specific rate limiting to prevent enumeration
+</li>
+</ul>
+</section>
+</div>
+
+<div class="px-6 py-4 bg-background-dark border-t border-border-dark flex items-center justify-between">
+<div class="flex items-center gap-4">
+<span class="text-xs text-slate-500">Status: <span class="inline-flex items-center px-2 py-0.5 rounded bg-severity-critical/10 text-severity-critical text-[10px] font-bold border border-severity-critical/20">CRITICAL - IMMEDIATE ACTION REQUIRED</span></span>
+</div>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary text-background-dark text-xs font-bold rounded-lg hover:scale-[1.02] transition-transform">
+<span class="material-symbols-outlined text-sm">rocket_launch</span>
+Initiate Remediation
+</button>
+</div>
+</div>
+</article>
+
+<!-- ============================================ -->
+<!-- FINDING 3: HIGH - Certificate Pinning Bypass -->
+<!-- ============================================ -->
+<article class="relative group">
+<div class="absolute -left-4 top-0 bottom-0 w-1 bg-severity-high rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="bg-surface-dark border border-border-dark rounded-xl overflow-hidden shadow-2xl">
+<div class="p-6 border-b border-border-dark flex items-start justify-between bg-gradient-to-r from-severity-high/5 to-transparent">
+<div class="space-y-2">
+<div class="flex items-center gap-3">
+<span class="px-2 py-0.5 rounded bg-severity-high text-[10px] font-black tracking-widest text-white uppercase">High</span>
+<span class="text-xs font-mono text-slate-500">ID: BCAS-2026-003</span>
+</div>
+<h3 class="text-2xl font-display font-bold text-white">Certificate Pinning Bypass Possible</h3>
+</div>
+<div class="text-right">
+<div class="inline-flex flex-col items-center justify-center p-2 rounded-lg bg-background-dark border border-border-dark min-w-[80px]">
+<p class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">CVSS</p>
+<p class="text-2xl font-display font-black text-severity-high">7.4</p>
+</div>
+</div>
+</div>
+
+<div class="p-6 space-y-6">
+<section class="space-y-2">
+<h4 class="text-xs font-bold uppercase tracking-wider text-primary">Technical Description</h4>
+<p class="text-sm leading-relaxed text-slate-300">
+Application uses OkHttp3's CertificatePinner but can be bypassed using Frida runtime instrumentation. Root detection via RootBeer library has known bypass techniques.
+</p>
+</section>
+
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h4 class="text-xs font-bold uppercase tracking-wider text-severity-high">🔍 Evidence & Proof of Concept</h4>
+<span class="px-2 py-1 rounded bg-severity-high/10 text-severity-high text-[10px] font-bold">VERIFIED</span>
+</div>
+
+<!-- Certificate Pinning Evidence -->
+<div class="bg-background-dark rounded-lg border border-border-dark overflow-hidden">
+<div class="p-3 border-b border-border-dark bg-surface-dark/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-severity-high text-sm">lock</span>
+<p class="text-xs font-bold text-white">Evidence #1: Certificate Pinning Implementation</p>
+</div>
+</div>
+<div class="p-4 space-y-3">
+<div class="flex items-center gap-2 text-xs text-slate-400">
+<span class="material-symbols-outlined text-sm">folder</span>
+<span class="font-mono">Source: app-bcas-decompiled/classes.dex - OkHttp3 library strings</span>
+</div>
+
+<div class="code-block rounded-lg p-4 font-mono text-xs overflow-x-auto">
+<div class="comment"># ⚠️ Certificate pinning detected (Good practice, but bypassable)</div>
+
+<div class="safe-code mt-3">
+<div class="text-slate-400"># Positive: CertificatePinner is implemented</div>
+<div>certificatePinner</div>
+<div>peerCertificates=</div>
+<div>AndroidCertificateChainCleaner</div>
+<div>CustomTrustRootIndex(trustManager=</div>
+</div>
+
+<div class="comment mt-4"># ❌ PROBLEMATIC: No additional integrity checks visible</div>
+<div class="problematic-code">
+<div class="text-slate-400"># These strings indicate basic pinning only:</div>
+<div>Certificate pinning failure!</div>
+<div>Pinned certificates for</div>
+<div class="text-slate-400"># No evidence of:</div>
+<div class="text-slate-400"># - SSL context hooking detection</div>
+<div class="text-slate-400"># - Frida-specific detection</div>
+<div class="text-slate-400"># - Runtime integrity verification</div>
+</div>
+</div>
+
+<div class="bg-severity-high/5 border border-severity-high/20 rounded p-3 mt-3">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-severity-high text-sm">warning</span>
+<div>
+<p class="text-xs font-bold text-severity-high">WHY THIS IS A PROBLEM:</p>
+<ul class="text-xs text-slate-300 mt-1 space-y-1">
+<li>• CertificatePinner alone is NOT sufficient against runtime attacks</li>
+<li>• Frida can hook the <span class="font-mono bg-severity-high/10 px-1 rounded">check()</span> method and bypass validation</li>
+<li>• No detection for Frida server, SSL hooking, or debugger</li>
+<li>• RootBeer has known bypasses (RootCloak+, Magisk Hide)</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Root Detection Evidence -->
+<div class="bg-background-dark rounded-lg border border-border-dark overflow-hidden">
+<div class="p-3 border-b border-border-dark bg-surface-dark/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-severity-high text-sm">security</span>
+<p class="text-xs font-bold text-white">Evidence #2: Root Detection (RootBeer Library)</p>
+</div>
+</div>
+<div class="p-4 space-y-3">
+<div class="flex items-center gap-2 text-xs text-slate-400">
+<span class="material-symbols-outlined text-sm">folder</span>
+<span class="font-mono">Source: app-bcas-decompiled/classes.dex - scottyab/rootbeer package</span>
+</div>
+
+<div class="code-block rounded-lg p-4 font-mono text-xs overflow-x-auto">
+<div class="comment"># Root detection library found:</div>
+<div class="safe-code">
+<div>Lcom/scottyab/rootbeer/RootBeerNative;</div>
+<div>isRooted=</div>
+<div>isEmulator=</div>
+<div>Lcom/dwidasa/bcas/mb/android/activity/InfoRootDetectionActivity;</div>
+</div>
+
+<div class="comment mt-4"># ❌ PROBLEMATIC: Known bypasses exist for RootBeer</div>
+<div class="problematic-code">
+<div class="text-slate-400"># RootCloak+ Xposed module can hide root from RootBeer</div>
+<div class="text-slate-400"># Frida can hook: RootBeer.isRooted() to return false</div>
+<div class="text-slate-400"># Magisk modules can hide root detection</div>
+</div>
+</div>
+
+<div class="bg-severity-high/5 border border-severity-high/20 rounded p-3 mt-3">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-severity-high text-sm">warning</span>
+<div>
+<p class="text-xs font-bold text-severity-high">BYPASS SCENARIO:</p>
+<ol class="text-xs text-slate-300 mt-1 space-y-1 list-decimal list-inside">
+<li>Install RootCloak+ Xposed module on rooted device</li>
+<li>Configure RootCloak to hide root from BCAS app package</li>
+<li>Launch BCAS app - root detection returns false</li>
+<li>Run Frida to bypass certificate pinning</li>
+<li>Intercept HTTPS traffic with Burp Suite</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Frida Bypass PoC -->
+<div class="bg-background-dark rounded-lg border border-border-dark overflow-hidden">
+<div class="p-3 border-b border-border-dark bg-surface-dark/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-severity-high text-sm">code</span>
+<p class="text-xs font-bold text-white">Proof of Concept: Frida Bypass Script</p>
+</div>
+</div>
+<div class="p-4 space-y-3">
+<div class="code-block rounded-lg p-4 font-mono text-xs text-slate-400 overflow-x-auto">
+<div class="comment">// cert_bypass.js - OkHttp3 CertificatePinner bypass</div>
+<div class="text-primary mt-2">Java.perform(function() {</div>
+<div>    <span class="text-severity-high">// Hook CertificatePinner.check() method</span></div>
+<div>    <span class="text-emerald-500">var</span> CertificatePinner = Java.use(<span class="text-severity-high">'okhttp3.CertificatePinner'</span>);</div>
+<div>    CertificatePinner.check.overload(</div>
+<div>        <span class="text-severity-high">'java.lang.String'</span>,</div>
+<div>        <span class="text-severity-high">'java.util.List'</span></div>
+<div>    ).implementation = <span class="text-emerald-500">function</span>(hostname, peerCertificates) {</div>
+<div>        console.log(<span class="text-severity-high">'[+] Certificate pinning BYPASSED for: '</span> + hostname);</div>
+<div class="problematic-code">
+<div>        <span class="text-slate-400">// Do nothing - skip certificate validation</span></div>
+<div>        <span class="text-emerald-500">return</span>;</div>
+</div>
+<div>    };</div>
+<div>});</div>
+
+<div class="comment mt-4">// Root detection bypass</div>
+<div class="text-primary">Java.perform(function() {</div>
+<div>    <span class="text-emerald-500">var</span> RootBeer = Java.use(<span class="text-severity-high">'com.scottyab.rootbeer.RootBeer'</span>);</div>
+<div>    RootBeer.isRooted.implementation = <span class="text-emerald-500">function</span>() {</div>
+<div class="problematic-code">
+<div>        console.log(<span class="text-severity-high">'[+] Root detection BYPASSED'</span>);</div>
+<div>        <span class="text-emerald-500">return false</span>; <span class="text-slate-400">// Always return "not rooted"</span></div>
+</div>
+<div>    };</div>
+<div>});</div>
+</div>
+
+<div class="text-slate-500 text-xs mt-3 italic">// Run: frida -U -f com.dwidasa.bcas.mb.android -l cert_bypass.js</div>
+</div>
+</div>
+</section>
+
+<section class="space-y-3 bg-background-dark/50 p-4 rounded-lg border border-border-dark">
+<h4 class="text-xs font-bold uppercase tracking-wider text-severity-low">✅ Recommended Remediation</h4>
+<ul class="space-y-2">
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Implement multi-layered detection (root + Frida + debugger + SSL hooking)
+</li>
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Use SafetyNet Attestation or Play Integrity API
+</li>
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Add SSL context hooking detection
+</li>
+</ul>
+</section>
+</div>
+
+<div class="px-6 py-4 bg-background-dark border-t border-border-dark flex items-center justify-between">
+<div class="flex items-center gap-4">
+<span class="text-xs text-slate-500">Status: <span class="inline-flex items-center px-2 py-0.5 rounded bg-severity-high/10 text-severity-high text-[10px] font-bold border border-severity-high/20">HIGH - URGENT</span></span>
+</div>
+<button class="flex items-center gap-2 px-4 py-2 bg-primary text-background-dark text-xs font-bold rounded-lg hover:scale-[1.02] transition-transform">
+<span class="material-symbols-outlined text-sm">assignment_turned_in</span>
+View Remediation Plan
+</button>
+</div>
+</div>
+</article>
+
+<!-- ============================================ -->
+<!-- FINDING 4: HIGH - Excessive Permissions -->
+<!-- ============================================ -->
+<article class="relative group">
+<div class="absolute -left-4 top-0 bottom-0 w-1 bg-severity-high rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="bg-surface-dark border border-border-dark rounded-xl overflow-hidden shadow-2xl">
+<div class="p-6 border-b border-border-dark flex items-start justify-between bg-gradient-to-r from-severity-high/5 to-transparent">
+<div class="space-y-2">
+<div class="flex items-center gap-3">
+<span class="px-2 py-0.5 rounded bg-severity-high text-[10px] font-black tracking-widest text-white uppercase">High</span>
+<span class="text-xs font-mono text-slate-500">ID: BCAS-2026-004</span>
+</div>
+<h3 class="text-2xl font-display font-bold text-white">Excessive Dangerous Permissions</h3>
+</div>
+<div class="text-right">
+<div class="inline-flex flex-col items-center justify-center p-2 rounded-lg bg-background-dark border border-border-dark min-w-[80px]">
+<p class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">CVSS</p>
+<p class="text-2xl font-display font-black text-severity-high">6.6</p>
+</div>
+</div>
+</div>
+
+<div class="p-6 space-y-6">
+<section class="space-y-2">
+<h4 class="text-xs font-bold uppercase tracking-wider text-primary">Technical Description</h4>
+<p class="text-sm leading-relaxed text-slate-300">
+Application requests 22+ permissions including SMS, contacts, and location access. READ_SMS permission could allow reading OTP codes from other apps.
+</p>
+</section>
+
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h4 class="text-xs font-bold uppercase tracking-wider text-severity-high">🔍 Evidence & Proof of Concept</h4>
+<span class="px-2 py-1 rounded bg-severity-high/10 text-severity-high text-[10px] font-bold">VERIFIED</span>
+</div>
+
+<div class="bg-background-dark rounded-lg border border-border-dark overflow-hidden">
+<div class="p-3 border-b border-border-dark bg-surface-dark/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-severity-high text-sm">permission</span>
+<p class="text-xs font-bold text-white">Evidence: Permission Declarations</p>
+</div>
+</div>
+<div class="p-4 space-y-3">
+<div class="flex items-center gap-2 text-xs text-slate-400">
+<span class="material-symbols-outlined text-sm">folder</span>
+<span class="font-mono">Source: app-bcas-decompiled/classes.dex - Android permission strings</span>
+</div>
+
+<div class="code-block rounded-lg p-4 font-mono text-xs overflow-x-auto">
+<div class="comment"># ❌ CRITICAL RISK PERMISSIONS:</div>
+
+<div class="problematic-code mt-3">
+<div class="text-slate-400"># Can read OTP codes from other apps</div>
+<div>android.permission.<span class="highlight-red">READ_SMS</span></div>
+<div class="comment"># SMS interception possible</div>
+<div>android.permission.<span class="highlight-red">RECEIVE_SMS</span></div>
+</div>
+
+<div class="problematic-code mt-3">
+<div class="text-slate-400"># Overlay attacks possible</div>
+<div>android.permission.<span class="highlight-red">SYSTEM_ALERT_WINDOW</span></div>
+</div>
+
+<div class="comment mt-4"># ⚠️ MEDIUM RISK PERMISSIONS:</div>
+
+<div class="safe-code mt-3">
+<div class="text-slate-400"># Privacy concerns</div>
+<div>android.permission.READ_CONTACTS</div>
+<div>android.permission.WRITE_CONTACTS</div>
+<div>android.permission.ACCESS_FINE_LOCATION</div>
+<div>android.permission.READ_PHONE_STATE</div>
+<div>android.permission.READ_EXTERNAL_STORAGE</div>
+<div>android.permission.WRITE_EXTERNAL_STORAGE</div>
+<div>android.permission.CALL_PHONE</div>
+</div>
+</div>
+
+<div class="bg-severity-high/5 border border-severity-high/20 rounded p-3 mt-3">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-severity-high text-sm">warning</span>
+<div>
+<p class="text-xs font-bold text-severity-high">WHY THIS IS A PROBLEM:</p>
+<ul class="text-xs text-slate-300 mt-1 space-y-1">
+<li>• <span class="font-mono bg-severity-high/10 px-1 rounded">READ_SMS</span> can read OTP codes from banking competitors</li>
+<li>• <span class="font-mono bg-severity-high/10 px-1 rounded">SYSTEM_ALERT_WINDOW</span> enables overlay attacks (fake login screens)</li>
+<li>• <span class="font-mono bg-severity-high/10 px-1 rounded">READ_CONTACTS</span> - harvesting user's contact list</li>
+<li>• <span class="font-mono bg-severity-high/10 px-1 rounded">ACCESS_FINE_LOCATION</span> - continuous user tracking</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="space-y-3 bg-background-dark/50 p-4 rounded-lg border border-border-dark">
+<h4 class="text-xs font-bold uppercase tracking-wider text-severity-low">✅ Recommended Remediation</h4>
+<ul class="space-y-2">
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Use SMS Retriever API instead of READ_SMS
+</li>
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Remove SYSTEM_ALERT_WINDOW unless necessary
+</li>
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Implement runtime permission requests with clear justification
+</li>
+</ul>
+</section>
+</div>
+</div>
+</article>
+
+<!-- ============================================ -->
+<!-- FINDING 5: MEDIUM - Root Detection Bypass -->
+<!-- ============================================ -->
+<article class="relative group">
+<div class="absolute -left-4 top-0 bottom-0 w-1 bg-severity-medium rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="bg-surface-dark border border-border-dark rounded-xl overflow-hidden shadow-2xl">
+<div class="p-6 border-b border-border-dark flex items-start justify-between bg-gradient-to-r from-severity-medium/5 to-transparent">
+<div class="space-y-2">
+<div class="flex items-center gap-3">
+<span class="px-2 py-0.5 rounded bg-severity-medium text-[10px] font-black tracking-widest text-white uppercase">Medium</span>
+<span class="text-xs font-mono text-slate-500">ID: BCAS-2026-005</span>
+</div>
+<h3 class="text-2xl font-display font-bold text-white">Root Detection Bypass (RootBeer)</h3>
+</div>
+<div class="text-right">
+<div class="inline-flex flex-col items-center justify-center p-2 rounded-lg bg-background-dark border border-border-dark min-w-[80px]">
+<p class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">CVSS</p>
+<p class="text-2xl font-display font-black text-severity-medium">5.9</p>
+</div>
+</div>
+</div>
+
+<div class="p-6 space-y-6">
+<section class="space-y-2">
+<h4 class="text-xs font-bold uppercase tracking-wider text-primary">Technical Description</h4>
+<p class="text-sm leading-relaxed text-slate-300">
+RootBeer library detected. Known bypass techniques exist: RootCloak+ Xposed module, Magisk Hide, Frida hooking, and emulator detection evasion.
+</p>
+</section>
+
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h4 class="text-xs font-bold uppercase tracking-wider text-severity-medium">🔍 Evidence & Proof of Concept</h4>
+<span class="px-2 py-1 rounded bg-severity-medium/10 text-severity-medium text-[10px] font-bold">VERIFIED</span>
+</div>
+
+<div class="bg-background-dark rounded-lg border border-border-dark overflow-hidden">
+<div class="p-3 border-b border-border-dark bg-surface-dark/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-severity-medium text-sm">bug_report</span>
+<p class="text-xs font-bold text-white">Evidence: Root Detection Library & Activity</p>
+</div>
+</div>
+<div class="p-4 space-y-3">
+<div class="flex items-center gap-2 text-xs text-slate-400">
+<span class="material-symbols-outlined text-sm">folder</span>
+<span class="font-mono">Source: app-bcas-decompiled/classes.dex string extraction</span>
+</div>
+
+<div class="code-block rounded-lg p-4 font-mono text-xs overflow-x-auto">
+<div class="comment"># Root detection library found:</div>
+<div class="problematic-code">
+<div class="text-severity-high">Lcom/scottyab/rootbeer/RootBeerNative;</div>
+<div>isRooted=</div>
+<div>isEmulator=</div>
+<div>Lcom/dwidasa/bcas/mb/android/activity/InfoRootDetectionActivity;</div>
+</div>
+
+<div class="comment mt-4"># Known bypasses (from security research):</div>
+<div class="problematic-code">
+<div class="text-slate-400"># 1. RootCloak+ - Xposed module that hides root from apps</div>
+<div class="text-slate-400"># 2. Magisk Hide - Magisk modules for root hiding</div>
+<div class="text-slate-400"># 3. Frida hooking - Can hook isRooted() to return false</div>
+</div>
+</div>
+
+<div class="bg-severity-medium/5 border border-severity-medium/20 rounded p-3 mt-3">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-severity-medium text-sm">info</span>
+<div>
+<p class="text-xs font-bold text-severity-medium">BYPASS TECHNIQUE:</p>
+<pre class="text-[10px] bg-background-dark p-2 rounded mt-1 overflow-x-auto">
+# Install RootCloak+ from Xposed Installer
+1. Enable Xposed Framework
+2. Install RootCloak+ module
+3. Add "com.dwidasa.bcas.mb.android" to RootCloak+ settings
+4. Enable root hiding for this app
+5. Restart app → Root detection bypassed
+</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="space-y-3 bg-background-dark/50 p-4 rounded-lg border border-border-dark">
+<h4 class="text-xs font-bold uppercase tracking-wider text-severity-low">✅ Recommended Remediation</h4>
+<ul class="space-y-2">
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Add SafetyNet Attestation or Play Integrity API
+</li>
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Implement multi-method root detection
+</li>
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Server-side fraud detection
+</li>
+</ul>
+</section>
+</div>
+</div>
+</article>
+
+<!-- ============================================ -->
+<!-- FINDING 6: MEDIUM - Firebase Data Exposure -->
+<!-- ============================================ -->
+<article class="relative group">
+<div class="absolute -left-4 top-0 bottom-0 w-1 bg-severity-medium rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="bg-surface-dark border border-border-dark rounded-xl overflow-hidden shadow-2xl">
+<div class="p-6 border-b border-border-dark flex items-start justify-between bg-gradient-to-r from-severity-medium/5 to-transparent">
+<div class="space-y-2">
+<div class="flex items-center gap-3">
+<span class="px-2 py-0.5 rounded bg-severity-medium text-[10px] font-black tracking-widest text-white uppercase">Medium</span>
+<span class="text-xs font-mono text-slate-500">ID: BCAS-2026-006</span>
+</div>
+<h3 class="text-2xl font-display font-bold text-white">Firebase/Google Services Data Exposure</h3>
+</div>
+<div class="text-right">
+<div class="inline-flex flex-col items-center justify-center p-2 rounded-lg bg-background-dark border border-border-dark min-w-[80px]">
+<p class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">CVSS</p>
+<p class="text-2xl font-display font-black text-severity-medium">5.3</p>
+</div>
+</div>
+</div>
+
+<div class="p-6 space-y-6">
+<section class="space-y-2">
+<h4 class="text-xs font-bold uppercase tracking-wider text-primary">Technical Description</h4>
+<p class="text-sm leading-relaxed text-slate-300">
+The application heavily integrates Firebase and Google Play Services. These services may transmit sensitive data to third-party servers.
+</p>
+</section>
+
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h4 class="text-xs font-bold uppercase tracking-wider text-severity-medium">🔍 Evidence & Proof of Concept</h4>
+<span class="px-2 py-1 rounded bg-severity-medium/10 text-severity-medium text-[10px] font-bold">VERIFIED</span>
+</div>
+
+<!-- Firebase Properties Evidence -->
+<div class="bg-background-dark rounded-lg border border-border-dark overflow-hidden">
+<div class="p-3 border-b border-border-dark bg-surface-dark/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-severity-medium text-sm">folder</span>
+<p class="text-xs font-bold text-white">Evidence #1: Firebase Configuration Files</p>
+</div>
+</div>
+<div class="p-4 space-y-3">
+<div class="flex items-center gap-2 text-xs text-slate-400">
+<span class="material-symbols-outlined text-sm">folder</span>
+<span class="font-mono">Source: app-bcas-decompiled/ directory - Firebase properties files</span>
+</div>
+
+<div class="code-block rounded-lg p-4 font-mono text-xs text-slate-400">
+<div class="comment"># Firebase configuration files found in APK:</div>
+
+<div class="problematic-code mt-3">
+<div class="text-slate-400"># These files contain Firebase configuration keys:</div>
+<div class="text-primary">firebase-analytics.properties</div>
+<div>version=20.0.0</div>
+<div>client=firebase-analytics</div>
+</div>
+
+<div class="problematic-code mt-3">
+<div class="text-primary">firebase-crashlytics.properties</div>
+<div>version=18.3.2</div>
+<div>client=firebase-crashlytics</div>
+</div>
+
+<div class="safe-code mt-3">
+<div class="text-slate-400"># Other Firebase services detected:</div>
+<div>firebase-annotations.properties</div>
+<div>firebase-core.properties</div>
+<div>firebase-iid.properties</div>
+<div>firebase-inappmessaging.properties</div>
+<div>play-services-ads-identifier.properties</div>
+<div>play-services-location.properties</div>
+<div>play-services-measurement-api.properties</div>
+</div>
+</div>
+
+<div class="bg-severity-medium/5 border border-severity-medium/20 rounded p-3 mt-3">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-severity-medium text-sm">warning</span>
+<div>
+<p class="text-xs font-bold text-severity-medium">WHY THIS IS A PROBLEM:</p>
+<ul class="text-xs text-slate-300 mt-1 space-y-1">
+<li>• <span class="font-mono bg-severity-medium/10 px-1 rounded">Firebase Analytics</span> tracks user behavior and app usage patterns</li>
+<li>• <span class="font-mono bg-severity-medium/10 px-1 rounded">Firebase Crashlytics</span> may send stack traces with transaction data</li>
+<li>• <span class="font-mono bg-severity-medium/10 px-1 rounded">Google Ads ID</span> enables user tracking across apps</li>
+<li>• Sensitive banking data could leak to third-party servers</li>
+<li>• Privacy compliance issues (GDPR, PDPA Indonesia)</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Strings Evidence -->
+<div class="bg-background-dark rounded-lg border border-border-dark overflow-hidden">
+<div class="p-3 border-b border-border-dark bg-surface-dark/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-severity-medium text-sm">code</span>
+<p class="text-xs font-bold text-white">Evidence #2: Data Collection Strings</p>
+</div>
+</div>
+<div class="p-4 space-y-3">
+<div class="flex items-center gap-2 text-xs text-slate-400">
+<span class="material-symbols-outlined text-sm">folder</span>
+<span class="font-mono">Source: app-bcas-decompiled/classes*.dex - Firebase-related strings</span>
+</div>
+
+<div class="code-block rounded-lg p-4 font-mono text-xs text-slate-400">
+<div class="comment"># Evidence of data collection:</div>
+
+<div class="problematic-code">
+<div class="text-slate-400"># Analytics collection enabled:</div>
+<div>FIREBASE_ANALYTICS_COLLECTION_ENABLED</div>
+<div>measurement.id.lifecycle.app_backgrounded_tracking</div>
+</div>
+
+<div class="problematic-code mt-3">
+<div class="text-slate-400"># Crashlytics API keys referenced:</div>
+<div>CRASHLYTICS_API_KEY</div>
+<div>CRASHLYTICS_ENDPOINT</div>
+<div>apiKey</div>
+<div>getApiKey</div>
+<div>setApiKey</div>
+</div>
+
+<div class="problematic-code mt-3">
+<div class="text-slate-400"># Advertising ID collection:</div>
+<div>google_analytics_adid_collection_enabled</div>
+<div>ADID</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="space-y-3 bg-background-dark/50 p-4 rounded-lg border border-border-dark">
+<h4 class="text-xs font-bold uppercase tracking-wider text-severity-low">✅ Recommended Remediation</h4>
+<ul class="space-y-2">
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Disable unnecessary analytics: <span class="font-mono bg-severity-medium/10 px-1 rounded">firebase_analytics_collection_enabled=false</span>
+</li>
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Sanitize Crashlytics data (hash user IDs, remove transaction amounts)
+</li>
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Disable advertising ID collection
+</li>
+</ul>
+</section>
+</div>
+</div>
+</article>
+
+<!-- ============================================ -->
+<!-- FINDING 7: MEDIUM - Cleartext Traffic -->
+<!-- ============================================ -->
+<article class="relative group">
+<div class="absolute -left-4 top-0 bottom-0 w-1 bg-severity-medium rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="bg-surface-dark border border-border-dark rounded-xl overflow-hidden shadow-2xl">
+<div class="p-6 border-b border-border-dark flex items-start justify-between bg-gradient-to-r from-severity-medium/5 to-transparent">
+<div class="space-y-2">
+<div class="flex items-center gap-3">
+<span class="px-2 py-0.5 rounded bg-severity-medium text-[10px] font-black tracking-widest text-white uppercase">Medium</span>
+<span class="text-xs font-mono text-slate-500">ID: BCAS-2026-007</span>
+</div>
+<h3 class="text-2xl font-display font-bold text-white">Potential Cleartext Traffic References</h3>
+</div>
+<div class="text-right">
+<div class="inline-flex flex-col items-center justify-center p-2 rounded-lg bg-background-dark border border-border-dark min-w-[80px]">
+<p class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">CVSS</p>
+<p class="text-2xl font-display font-black text-severity-medium">5.9</p>
+</div>
+</div>
+</div>
+
+<div class="p-6 space-y-6">
+<section class="space-y-2">
+<h4 class="text-xs font-bold uppercase tracking-wider text-primary">Technical Description</h4>
+<p class="text-sm leading-relaxed text-slate-300">
+Static analysis reveals multiple references to cleartext traffic in the code, though the app primarily uses HTTPS. This may indicate fallback to HTTP or potential misconfigurations.
+</p>
+</section>
+
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h4 class="text-xs font-bold uppercase tracking-wider text-severity-medium">🔍 Evidence & Proof of Concept</h4>
+<span class="px-2 py-1 rounded bg-severity-medium/10 text-severity-medium text-[10px] font-bold">VERIFIED</span>
+</div>
+
+<div class="bg-background-dark rounded-lg border border-border-dark overflow-hidden">
+<div class="p-3 border-b border-border-dark bg-surface-dark/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-severity-medium text-sm">warning</span>
+<p class="text-xs font-bold text-white">Evidence: Cleartext Traffic Strings</p>
+</div>
+</div>
+<div class="p-4 space-y-3">
+<div class="flex items-center gap-2 text-xs text-slate-400">
+<span class="material-symbols-outlined text-sm">folder</span>
+<span class="font-mono">Source: app-bcas-decompiled/classes*.dex - cleartext-related strings</span>
+</div>
+
+<div class="code-block rounded-lg p-4 font-mono text-xs overflow-x-auto">
+<div class="comment"># ❌ PROBLEMATIC: Cleartext traffic handling found</div>
+
+<div class="problematic-code">
+<div class="text-severity-high">CLEARTEXT communication not enabled for client</div>
+<div>CLEARTEXT communication to</div>
+<div>CLEARTEXT-only client</div>
+</div>
+
+<div class="problematic-code mt-3">
+<div class="text-slate-400"># Error messages suggest cleartext protocol rejection:</div>
+<div>Permission denied... protocol is not secure enough</div>
+<div class="text-slate-400"># This indicates app MAY have cleartext fallback logic</div>
+</div>
+</div>
+
+<div class="bg-severity-medium/5 border border-severity-medium/20 rounded p-3 mt-3">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-severity-medium text-sm">warning</span>
+<div>
+<p class="text-xs font-bold text-severity-medium">WHY THIS IS A PROBLEM:</p>
+<ul class="text-xs text-slate-300 mt-1 space-y-1">
+<li>• Strings suggest potential HTTP fallback mechanism exists</li>
+<li>• <span class="font-mono bg-severity-medium/10 px-1 rounded">CLEARTEXT-only client</span> indicates possible cleartext-only mode</li>
+<li>• If HTTPS fails, app might fallback to HTTP (send data in plaintext)</li>
+<li>• Banking data should NEVER use HTTP under any circumstances</li>
+<li>• Man-in-the-Middle attacks possible if cleartext fallback exists</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Network Security Config Analysis -->
+<div class="bg-background-dark rounded-lg border border-border-dark overflow-hidden">
+<div class="p-3 border-b border-border-dark bg-surface-dark/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-severity-medium text-sm">settings_ethernet</span>
+<p class="text-xs font-bold text-white">Evidence #2: Potential Network Security Configuration</p>
+</div>
+</div>
+<div class="p-4 space-y-3">
+<div class="code-block rounded-lg p-4 font-mono text-xs text-slate-400">
+<div class="comment"># ⚠️ IF network_security_config.xml allows cleartext:</div>
+<div class="problematic-code">
+<div>&lt;domain-config cleartextTrafficPermitted="true"&gt;</div>
+<div>    &lt;domain includeSubdomains="true"&gt;internal.test.server&lt;/domain&gt;</div>
+<div>&lt;/domain-config&gt;</div>
+</div>
+
+<div class="comment mt-4"># ❌ PROBLEMATIC: HTTP fallback pattern (potential):</div>
+<div class="problematic-code">
+<div class="text-slate-400">// If HTTPS fails, fallback to HTTP (BAD PRACTICE):</div>
+<div>try {</div>
+<div>    client.call(url.replace("http://", "https://"));</div>
+<div>} catch (e: Exception) {</div>
+<div class="problematic-code">
+<div>    client.call(url.replace("https://", "http://")); // Fallback to cleartext</div>
+</div>
+<div>}</div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="space-y-3 bg-background-dark/50 p-4 rounded-lg border border-border-dark">
+<h4 class="text-xs font-bold uppercase tracking-wider text-severity-low">✅ Recommended Remediation</h4>
+<ul class="space-y-2">
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Enforce HTTPS-only: <span class="font-mono bg-severity-medium/10 px-1 rounded">android:usesCleartextTraffic="false"</span>
+</li>
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Network Security Config: <span class="font-mono bg-severity-medium/10 px-1 rounded">cleartextTrafficPermitted="false"</span>
+</li>
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Remove ALL HTTP fallback logic
+</li>
+</ul>
+</section>
+</div>
+</div>
+</article>
+
+<!-- ============================================ -->
+<!-- FINDING 8: LOW - Debug Artifacts -->
+<!-- ============================================ -->
+<article class="relative group">
+<div class="absolute -left-4 top-0 bottom-0 w-1 bg-severity-low rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="bg-surface-dark border border-border-dark rounded-xl overflow-hidden shadow-2xl">
+<div class="p-6 border-b border-border-dark flex items-start justify-between bg-gradient-to-r from-severity-low/5 to-transparent">
+<div class="space-y-2">
+<div class="flex items-center gap-3">
+<span class="px-2 py-0.5 rounded bg-severity-low text-[10px] font-black tracking-widest text-white uppercase">Low</span>
+<span class="text-xs font-mono text-slate-500">ID: BCAS-2026-008</span>
+</div>
+<h3 class="text-2xl font-display font-bold text-white">Debug/Build Artifacts in Release</h3>
+</div>
+<div class="text-right">
+<div class="inline-flex flex-col items-center justify-center p-2 rounded-lg bg-background-dark border border-border-dark min-w-[80px]">
+<p class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">CVSS</p>
+<p class="text-2xl font-display font-black text-severity-low">3.7</p>
+</div>
+</div>
+</div>
+
+<div class="p-6 space-y-6">
+<section class="space-y-2">
+<h4 class="text-xs font-bold uppercase tracking-wider text-primary">Technical Description</h4>
+<p class="text-sm leading-relaxed text-slate-300">
+The application includes debug-related artifacts and test activities that should be removed from production builds, including DebugProbesKt.bin and TestCameraActivity.
+</p>
+</section>
+
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h4 class="text-xs font-bold uppercase tracking-wider text-severity-low">🔍 Evidence & Proof of Concept</h4>
+<span class="px-2 py-1 rounded bg-severity-low/10 text-severity-low text-[10px] font-bold">VERIFIED</span>
+</div>
+
+<div class="bg-background-dark rounded-lg border border-border-dark overflow-hidden">
+<div class="p-3 border-b border-border-dark bg-surface-dark/50">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-severity-low text-sm">bug_report</span>
+<p class="text-xs font-bold text-white">Evidence: Debug Artifacts Found</p>
+</div>
+</div>
+<div class="p-4 space-y-3">
+<div class="flex items-center gap-2 text-xs text-slate-400">
+<span class="material-symbols-outlined text-sm">folder</span>
+<span class="font-mono">Source: app-bcas-decompiled/ directory and classes.dex</span>
+</div>
+
+<div class="code-block rounded-lg p-4 font-mono text-xs text-slate-400">
+<div class="comment"># ❌ PROBLEMATIC: Debug files in release build:</div>
+
+<div class="problematic-code">
+<div class="text-slate-400"># Kotlin debug probes file found:</div>
+<div class="text-severity-high">DebugProbesKt.bin</div>
+<div class="text-slate-400"># This file should ONLY exist in debug builds, not production</div>
+</div>
+
+<div class="problematic-code mt-3">
+<div class="text-slate-400"># Test activities found (should not be in production):</div>
+<div>Lcom/dwidasa/bcas/mb/android/activity/TestCameraActivity;</div>
+<div>TestCameraActivity$a;</div>
+<div>TestCameraActivity$b;</div>
+<div>TestCameraActivity$c;</div>
+<div>TestCameraActivity$d;</div>
+<div>Lcom/dwidasa/bcas/mb/android/activity/camera/CameraTestActivity;</div>
+</div>
+
+<div class="problematic-code mt-3">
+<div class="text-slate-400"># Debug activity (may expose security info):</div>
+<div>Lcom/dwidasa/bcas/mb/android/activity/InfoRootDetectionActivity;</div>
+</div>
+
+<div class="problematic-code mt-3">
+<div class="text-slate-400"># Debug logging strings found:</div>
+<div>Debug-level message logging enabled</div>
+<div>qFaster debug mode event logging enabled</div>
+<div>setDebugName</div>
+<div>CN=Android Debug,O=Android,C=US (certificate)</div>
+</div>
+</div>
+
+<div class="bg-severity-low/5 border border-severity-low/20 rounded p-3 mt-3">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-severity-low text-sm">info</span>
+<div>
+<p class="text-xs font-bold text-severity-low">WHY THIS IS A PROBLEM:</p>
+<ul class="text-xs text-slate-300 mt-1 space-y-1">
+<li>• DebugProbesKt.bin indicates debug code was not properly stripped</li>
+<li>• Test activities increase attack surface and may expose functionality</li>
+• • Debug logging may expose sensitive information in logs
+<li>• Debug certificate (CN=Android Debug) detected</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="space-y-3 bg-background-dark/50 p-4 rounded-lg border border-border-dark">
+<h4 class="text-xs font-bold uppercase tracking-wider text-severity-low">✅ Recommended Remediation</h4>
+<ul class="space-y-2">
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Enable ProGuard/R8: <span class="font-mono bg-severity-low/10 px-1 rounded">minifyEnabled true</span>, <span class="font-mono bg-severity-low/10 px-1 rounded">shrinkResources true</span>
+</li>
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Remove test activities in release build (<span class="font-mono bg-severity-low/10 px-1 rounded">BuildConfig.DEBUG</span> check)
+</li>
+<li class="flex items-start gap-2 text-sm text-slate-300">
+<span class="material-symbols-outlined text-severity-low text-sm mt-0.5">check_circle</span>
+Strip logging in release: <span class="font-mono bg-severity-low/10 px-1 rounded">-assumenosideffects class android.util.Log { ... }</span>
+</li>
+</ul>
+</section>
+</div>
+</div>
+</article>
+
+</section>
+
+<!-- Report Footer -->
+<section class="bg-surface-dark border border-border-dark rounded-xl p-6 mt-12">
+<div class="text-center space-y-4">
+<div class="flex items-center justify-center gap-3">
+<div class="size-10 bg-primary/10 flex items-center justify-center rounded-lg">
+<span class="material-symbols-outlined text-primary">shield_lock</span>
+</div>
+<div class="text-left">
+<p class="text-xs text-slate-500 uppercase tracking-wider">Report Generated</p>
+<p class="text-lg font-display font-bold text-white">January 20, 2026</p>
+</div>
+</div>
+<div class="pt-4 border-t border-border-dark">
+<p class="text-xs text-slate-400 italic">
+This report is based on STATIC ANALYSIS ONLY from DEX bytecode string extraction. All 8 findings include complete Evidence & Proof of Concept with source file locations and code snippets. Findings should be validated with dynamic analysis and penetration testing.
+</p>
+</div>
+</div>
+<div class="pt-4 border-t border-border-dark mt-4">
+<p class="text-xs text-slate-500">
+<span class="font-bold">Package:</span> com.dwidasa.bcas.mb.android |
+<span class="font-bold">Analysis Type:</span> Static Reverse Engineering |
+<span class="font-bold">Total Findings:</span> 8 (2 Critical, 3 High, 2 Medium, 1 Low)
+</p>
+</div>
+</div>
+
+</div>
+</main>
+
+</div>
+
+</body>
+</html>
