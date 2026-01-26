@@ -814,3 +814,280 @@ class HeaderScanner(BaseScanner):
                     findings.append(finding)
 
         return findings
+
+
+class NucleiScanner(BaseScanner):
+    """Nuclei Vulnerability Scanner Integration"""
+
+    def __init__(self, client, logger):
+        super().__init__(client, logger)
+        self.name = "Nuclei Scanner"
+
+    def scan(self, config=None, discovered_endpoints=None):
+        """Run Nuclei scanner on target"""
+        findings = []
+        import subprocess
+        import os
+
+        # Check if nuclei is installed
+        if not self._check_nuclei_installed():
+            self.logger.warning("Nuclei is not installed. Skip Nuclei scanning.")
+            self.logger.info("Install Nuclei: https://github.com/projectdiscovery/nuclei")
+            return findings
+
+        # Prepare nuclei command
+        target_url = self.client.base_url
+        output_file = f"nuclei_results_{int(time.time())}.json"
+
+        try:
+            # Build nuclei command
+            nuclei_cmd = [
+                "nuclei",
+                "-u", target_url,
+                "-json",
+                "-o", output_file,
+                "-severity", "critical,high,medium,low",
+                "-tags", "api,exposure,misconfig"
+            ]
+
+            # Add custom headers if provided
+            if config and "headers" in config:
+                for header_name, header_value in config["headers"].items():
+                    nuclei_cmd.extend(["-H", f"{header_name}: {header_value}"])
+
+            self.logger.info(f"Running Nuclei scanner on {target_url}")
+
+            # Run nuclei
+            result = subprocess.run(
+                nuclei_cmd,
+                capture_output=True,
+                text=True,
+                timeout=300  # 5 minutes timeout
+            )
+
+            # Parse results
+            if os.path.exists(output_file):
+                with open(output_file, 'r') as f:
+                    for line in f:
+                        try:
+                            vuln_data = json.loads(line.strip())
+                            finding = self._parse_nuclei_result(vuln_data)
+                            if finding:
+                                findings.append(finding)
+                        except json.JSONDecodeError:
+                            continue
+
+                # Clean up output file
+                os.remove(output_file)
+
+            self.logger.success(f"Nuclei scan completed. Found {len(findings)} vulnerabilities")
+
+        except subprocess.TimeoutExpired:
+            self.logger.error("Nuclei scan timed out")
+        except FileNotFoundError:
+            self.logger.warning("Nuclei executable not found")
+        except Exception as e:
+            self.logger.error(f"Error running Nuclei: {e}")
+
+        return findings
+
+    def _check_nuclei_installed(self):
+        """Check if nuclei is installed"""
+        import subprocess
+        try:
+            subprocess.run(
+                ["nuclei", "-version"],
+                capture_output=True,
+                timeout=5
+            )
+            return True
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            return False
+
+    def _parse_nuclei_result(self, vuln_data):
+        """Parse Nuclei result into Vulnerability object"""
+        try:
+            severity_map = {
+                "critical": "CRITICAL",
+                "high": "HIGH",
+                "medium": "MEDIUM",
+                "low": "LOW",
+                "info": "INFO"
+            }
+
+            severity = severity_map.get(
+                vuln_data.get("info", {}).get("severity", "info").lower(),
+                "INFO"
+            )
+
+            info = vuln_data.get("info", {})
+            template_id = info.get("name", "Unknown")
+            description = info.get("description", "")
+
+            # Build evidence
+            evidence = f"Template: {vuln_data.get('template-id', 'N/A')}\n"
+            if "match" in vuln_data:
+                evidence += f"Match: {vuln_data['match']}\n"
+            if "extracted-results" in vuln_data:
+                evidence += f"Extracted: {json.dumps(vuln_data['extracted-results'], indent=2)}"
+
+            return Vulnerability.create(
+                f"Nuclei: {template_id}",
+                severity,
+                description,
+                evidence,
+                vuln_data.get("host", ""),
+                remediation=info.get("reference", "")
+            )
+        except Exception as e:
+            self.logger.error(f"Error parsing Nuclei result: {e}")
+            return None
+
+
+class GhauriScanner(BaseScanner):
+    """Ghauri Web Security Scanner Integration"""
+
+    def __init__(self, client, logger):
+        super().__init__(client, logger)
+        self.name = "Ghauri Scanner"
+
+    def scan(self, config=None, discovered_endpoints=None):
+        """Run Ghauri scanner on target"""
+        findings = []
+        import subprocess
+        import os
+
+        # Check if ghauri is installed
+        if not self._check_ghauri_installed():
+            self.logger.warning("Ghauri is not installed. Skip Ghauri scanning.")
+            self.logger.info("Install Ghauri: https://github.com/r0oth3x49/ghauri")
+            return findings
+
+        # Prepare ghauri command
+        target_url = self.client.base_url
+        output_file = f"ghauri_results_{int(time.time())}.json"
+
+        try:
+            # Build ghauri command
+            ghauri_cmd = [
+                "ghauri",
+                "-u", target_url,
+                "-o", output_file,
+                "-f", "json",
+                "--silent"
+            ]
+
+            # Add custom headers if provided
+            if config and "headers" in config:
+                for header_name, header_value in config["headers"].items():
+                    ghauri_cmd.extend(["-H", f"{header_name}: {header_value}"])
+
+            self.logger.info(f"Running Ghauri scanner on {target_url}")
+
+            # Run ghauri
+            result = subprocess.run(
+                ghauri_cmd,
+                capture_output=True,
+                text=True,
+                timeout=600  # 10 minutes timeout
+            )
+
+            # Parse results
+            if os.path.exists(output_file):
+                with open(output_file, 'r') as f:
+                    ghauri_results = json.load(f)
+                    for vuln_data in ghauri_results.get("vulnerabilities", []):
+                        finding = self._parse_ghauri_result(vuln_data)
+                        if finding:
+                            findings.append(finding)
+
+                # Clean up output file
+                os.remove(output_file)
+
+            self.logger.success(f"Ghauri scan completed. Found {len(findings)} vulnerabilities")
+
+        except subprocess.TimeoutExpired:
+            self.logger.error("Ghauri scan timed out")
+        except FileNotFoundError:
+            self.logger.warning("Ghauri executable not found")
+        except Exception as e:
+            self.logger.error(f"Error running Ghauri: {e}")
+
+        return findings
+
+    def _check_ghauri_installed(self):
+        """Check if ghauri is installed"""
+        import subprocess
+        try:
+            subprocess.run(
+                ["ghauri", "-version"],
+                capture_output=True,
+                timeout=5
+            )
+            return True
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            return False
+
+    def _parse_ghauri_result(self, vuln_data):
+        """Parse Ghauri result into Vulnerability object"""
+        try:
+            severity_map = {
+                "critical": "CRITICAL",
+                "high": "HIGH",
+                "medium": "MEDIUM",
+                "low": "LOW"
+            }
+
+            severity = severity_map.get(
+                vuln_data.get("severity", "info").lower(),
+                "INFO"
+            )
+
+            vuln_name = vuln_data.get("name", "Unknown Vulnerability")
+            description = vuln_data.get("description", "")
+
+            # Build evidence
+            evidence = f"Type: {vuln_data.get('type', 'N/A')}\n"
+            evidence += f"URL: {vuln_data.get('url', 'N/A')}\n"
+            if "param" in vuln_data:
+                evidence += f"Parameter: {vuln_data['param']}\n"
+            if "payload" in vuln_data:
+                evidence += f"Payload: {vuln_data['payload']}\n"
+            if "proof" in vuln_data:
+                evidence += f"Proof: {vuln_data['proof']}"
+
+            return Vulnerability.create(
+                f"Ghauri: {vuln_name}",
+                severity,
+                description,
+                evidence,
+                vuln_data.get("url", ""),
+                remediation=vuln_data.get("remediation", "")
+            )
+        except Exception as e:
+            self.logger.error(f"Error parsing Ghauri result: {e}")
+            return None
+
+
+class ExternalToolsScanner(BaseScanner):
+    """Combined External Tools Scanner (Nuclei + Ghauri)"""
+
+    def __init__(self, client, logger):
+        super().__init__(client, logger)
+        self.name = "External Tools Scanner"
+        self.nuclei_scanner = NucleiScanner(client, logger)
+        self.ghauri_scanner = GhauriScanner(client, logger)
+
+    def scan(self, config=None, discovered_endpoints=None):
+        """Run all external tools"""
+        findings = []
+
+        # Run Nuclei
+        nuclei_findings = self.nuclei_scanner.scan(config, discovered_endpoints)
+        findings.extend(nuclei_findings)
+
+        # Run Ghauri
+        ghauri_findings = self.ghauri_scanner.scan(config, discovered_endpoints)
+        findings.extend(ghauri_findings)
+
+        return findings

@@ -36,7 +36,7 @@
 
 ## ✨ Features
 
-### 🔍 Vulnerability Scanners (14 Total)
+### 🔍 Vulnerability Scanners (17 Total)
 
 #### Injection Scanners
 - **SQL Injection Scanner** - Error-based, blind, union-based SQLi
@@ -57,6 +57,11 @@
 #### Authentication & Security
 - **Authentication Scanner** - JWT analysis, rate limiting, auth bypass
 - **Security Headers Scanner** - Missing security headers detection
+
+#### External Tools Integration
+- **Nuclei Scanner** - Template-based vulnerability scanning (requires Nuclei)
+- **Ghauri Scanner** - Web application security scanning (requires Ghauri)
+- **External Tools Scanner** - Combined Nuclei + Ghauri scanning
 
 ### 🚀 Advanced Features
 
@@ -97,6 +102,38 @@ chmod +x tungkuapi.py
 - Python 3.7 or higher
 - pip
 - Optional: weasyprint (for PDF reports)
+
+### External Tools (Optional)
+
+For enhanced scanning capabilities, you can install the following external tools:
+
+#### Nuclei
+```bash
+# Install Nuclei (Go-based template scanner)
+go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+
+# Or download from GitHub releases
+wget https://github.com/projectdiscovery/nuclei/releases/latest/download/nuclei_linux_amd64.zip
+unzip nuclei_linux_amd64.zip
+sudo mv nuclei /usr/local/bin/
+
+# Update templates
+nuclei -update-templates
+```
+
+#### Ghauri
+```bash
+# Install Ghauri (Python-based web scanner)
+pip install ghauri
+
+# Or clone from GitHub
+git clone https://github.com/r0oth3x49/ghauri.git
+cd ghauri
+pip install -r requirements.txt
+python setup.py install
+```
+
+**Note:** These tools are optional. TungkuApi will automatically detect if they're installed and skip scanning if they're not available.
 
 ## 🚀 Quick Start
 
@@ -156,6 +193,25 @@ python3 tungkuapi.py --load scan1.json --diff scan2.json
 
 # Multi-threaded with delay
 python3 tungkuapi.py -u https://api.example.com --threads 10 --delay 0.5
+```
+
+### External Tools Scanning
+
+```bash
+# Run Nuclei scanner only
+python3 tungkuapi.py -u https://api.example.com -s nuclei
+
+# Run Ghauri scanner only
+python3 tungkuapi.py -u https://api.example.com -s ghauri
+
+# Run both Nuclei and Ghauri
+python3 tungkuapi.py -u https://api.example.com -s external
+
+# Combine external tools with built-in scanners
+python3 tungkuapi.py -u https://api.example.com -s sqli,xss,nuclei,ghauri
+
+# Full scan including external tools
+python3 tungkuapi.py -u https://api.example.com -s all
 ```
 
 ### API Discovery
@@ -290,6 +346,9 @@ Behavior:
 | `cors` | CORS Misconfiguration Scanner |
 | `auth` | Authentication & Authorization Scanner |
 | `headers` | Security Headers Scanner |
+| `nuclei` | Nuclei Scanner (requires Nuclei installed) |
+| `ghauri` | Ghauri Scanner (requires Ghauri installed) |
+| `external` | Combined Nuclei + Ghauri Scanners |
 | `discovery` | API Discovery Only |
 | `fuzz` | API Fuzzing Only |
 | `all` | Run all scanners (default) |

@@ -22,7 +22,8 @@ from scanners import (
     SQLScanner, XSSScanner, SSRFScanner, AuthScanner, HeaderScanner,
     XXEScanner, CommandInjectionScanner, DirectoryTraversalScanner,
     MassAssignmentScanner, ParameterPollutionScanner, TemplateInjectionScanner,
-    GraphQLScanner, FileUploadScanner, CORSScanner
+    GraphQLScanner, FileUploadScanner, CORSScanner,
+    NucleiScanner, GhauriScanner, ExternalToolsScanner
 )
 from reporter import ReportGenerator
 from utils import APIClient, Logger, APIDiscovery, WAFDetector, Fuzzer, download_seclists
@@ -93,7 +94,10 @@ class TungkuApi:
             "template": TemplateInjectionScanner,
             "graphql": GraphQLScanner,
             "fileupload": FileUploadScanner,
-            "cors": CORSScanner
+            "cors": CORSScanner,
+            "nuclei": NucleiScanner,
+            "ghauri": GhauriScanner,
+            "external": ExternalToolsScanner
         }
 
         # Select scanners to run
@@ -397,7 +401,7 @@ def main():
 
     # Scan options
     parser.add_argument("-s", "--scan",
-                       help="Scan types (comma-separated): sqli,xss,ssrf,auth,headers,xxe,cmdi,dirtrav,massassign,parampoll,template,graphql,fileupload,cors,discovery,fuzz")
+                       help="Scan types (comma-separated): sqli,xss,ssrf,auth,headers,xxe,cmdi,dirtrav,massassign,parampoll,template,graphql,fileupload,cors,nuclei,ghauri,external,discovery,fuzz")
     parser.add_argument("--fuzz", action="store_true",
                        help="Enable API fuzzing")
     parser.add_argument("-w", "--wordlist", metavar="FILE",
