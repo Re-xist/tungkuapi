@@ -307,8 +307,13 @@ class TungkuApi:
         parsed_url = urlparse(self.target)
         target_name = parsed_url.netloc.replace('.', '_') if parsed_url.netloc else 'target'
 
+        # Create target-specific subfolder
+        target_dir = self.output_dir / target_name
+        target_dir.mkdir(exist_ok=True, parents=True)
+        self.logger.info(f"📁 Output directory: {target_dir}")
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        report_file = self.output_dir / f"{target_name}_scan_{timestamp}"
+        report_file = target_dir / f"scan_{timestamp}"
 
         generator = ReportGenerator(self.results, self.logger)
 
@@ -804,11 +809,11 @@ def main():
         # Generate report from loaded results
         if not args.no_report:
             output_dir = Path(args.output)
-            output_dir.mkdir(exist_ok=True)
+            output_dir.mkdir(exist_ok=True, parents=True)
             generator = ReportGenerator(results, Logger(args.verbose))
 
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            report_file = output_dir / f"report_{timestamp}"
+            report_file = output_dir / f"loaded_report_{timestamp}"
 
             if args.format == "html" or args.format == "all":
                 generator.generate_html(str(report_file) + ".html")
